@@ -1,0 +1,88 @@
+spring:
+  application:
+    name: lingua-hub-backend
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/lingua_hub
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+server:
+  port: 8081
+
+
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:your-secret-key-change-in-production-min-256-bits}
+  expiration: 86400000 # 24 hours in milliseconds
+  refresh-expiration: 604800000 # 7 days
+
+# LiveKit Configuration
+livekit:
+  api-key: ${LIVEKIT_API_KEY:APIEZCTfVKs3bGH}
+  api-secret: ${LIVEKIT_API_SECRET:qzsYKTH3EkKjRflbDXjHpWxuQKsPLBXyuVfkgvKEkuD}
+  url: ${LIVEKIT_URL:wss://easylearn-9lc2pn85.livekit.cloud}
+  token-expiration: 14400 # 4 hours in seconds
+
+# Python Service Configuration
+#python-service:
+#  url: ${PYTHON_SERVICE_URL:http://localhost:8000}
+
+# OpenAI Realtime Model Configuration
+#openai:
+#  api-key: ${OPENAI_API_KEY:your-openai-api-key}
+#  realtime-model: gpt-4o-realtime-preview
+
+# MinIO Configuration
+#minio:
+#  url: ${MINIO_URL:http://localhost:9000}
+#  access-key: ${MINIO_ACCESS_KEY:minioadmin}
+#  secret-key: ${MINIO_SECRET_KEY:minioadmin}
+#  bucket-name: ${MINIO_BUCKET_NAME:lingua-recordings}
+
+# CORS Configuration
+cors:
+  allowed-origins: ${CORS_ORIGINS:http://localhost:8080,http://localhost:8082}
+  allowed-methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
+  allowed-headers: "*"
+  allow-credentials: true
+
+# Logging
+logging:
+  level:
+    com.lingua.hub: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+
+# Swagger/OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    tags-sorter: alpha
+    operations-sorter: alpha
+    display-request-duration: true
+    doc-expansion: none
+    default-models-expand-depth: 3
+    default-model-expand-depth: 3
+  show-actuator: false
+

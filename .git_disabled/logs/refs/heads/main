@@ -1,0 +1,3 @@
+0000000000000000000000000000000000000000 96c0ada74f993250b9c871fa605466f9e647a241 HOUSSEM Aloui <houssem.aloui@amaris.com> 1769444629 +0100	clone: from https://github.com/Houssemalou/easyLearn.git
+96c0ada74f993250b9c871fa605466f9e647a241 409c61fe36e8a0e4705f0d3861e59711c32734cd HOUSSEM Aloui <houssem.aloui@amaris.com> 1769531416 +0100	commit: complete authentication
+409c61fe36e8a0e4705f0d3861e59711c32734cd 23d9e04ba028022ed4a0bdcc82b849c2c09724bf HOUSSEM Aloui <houssem.aloui@amaris.com> 1769623987 +0100	commit: handle access tokens for roles
