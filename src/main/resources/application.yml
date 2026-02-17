@@ -1,6 +1,8 @@
 spring:
   application:
     name: lingua-hub-backend
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
 
   datasource:
     url: jdbc:postgresql://localhost:5432/lingua_hub
@@ -40,14 +42,6 @@ livekit:
   url: ${LIVEKIT_URL:wss://easylearn-9lc2pn85.livekit.cloud}
   token-expiration: 14400 # 4 hours in seconds
 
-# Python Service Configuration
-#python-service:
-#  url: ${PYTHON_SERVICE_URL:http://localhost:8000}
-
-# OpenAI Realtime Model Configuration
-#openai:
-#  api-key: ${OPENAI_API_KEY:your-openai-api-key}
-#  realtime-model: gpt-4o-realtime-preview
 
 # MinIO Configuration
 #minio:
@@ -85,4 +79,3 @@ springdoc:
     default-models-expand-depth: 3
     default-model-expand-depth: 3
   show-actuator: false
-
