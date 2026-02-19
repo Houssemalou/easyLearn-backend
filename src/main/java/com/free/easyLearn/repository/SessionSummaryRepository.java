@@ -12,8 +12,8 @@ import java.util.UUID;
 public interface SessionSummaryRepository extends JpaRepository<SessionSummary, UUID> {
 
     Optional<SessionSummary> findByRoomId(UUID roomId);
-    
+
     List<SessionSummary> findByProfessorId(UUID professorId);
-    
+
     List<SessionSummary> findByRoomIdIn(List<UUID> roomIds);
 }

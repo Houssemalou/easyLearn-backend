@@ -1,7 +1,6 @@
 package com.free.easyLearn.repository;
 
 import com.free.easyLearn.entity.Room;
-import com.free.easyLearn.entity.Student;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -9,7 +8,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -46,8 +44,8 @@ public interface RoomRepository extends JpaRepository<Room, UUID> {
 
     // Get rooms where a student is invited
     @Query("SELECT DISTINCT r FROM Room r " +
-           "JOIN r.participants p " +
-           "WHERE p.student.id = :studentId AND p.invited = true " +
-           "ORDER BY r.scheduledAt DESC")
+            "JOIN r.participants p " +
+            "WHERE p.student.id = :studentId AND p.invited = true " +
+            "ORDER BY r.scheduledAt DESC")
     Page<Room> findByStudentId(@Param("studentId") UUID studentId, Pageable pageable);
 }

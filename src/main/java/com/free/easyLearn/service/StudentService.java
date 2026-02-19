@@ -99,6 +99,12 @@ public class StudentService {
         return mapToDTO(student);
     }
 
+    public StudentDTO getStudentByUserId(UUID userId) {
+        Student student = studentRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found for this user"));
+        return mapToDTO(student);
+    }
+
     public Page<StudentDTO> getStudents(int page, int size, String sortBy, String sortOrder) {
         Sort sort = sortOrder.equalsIgnoreCase("desc")
                 ? Sort.by(sortBy).descending()

@@ -5,7 +5,12 @@ import com.free.easyLearn.dto.common.PageResponse;
 import com.free.easyLearn.dto.professor.CreateProfessorRequest;
 import com.free.easyLearn.dto.professor.ProfessorDTO;
 import com.free.easyLearn.dto.professor.UpdateProfessorRequest;
+import com.free.easyLearn.dto.room.RoomDTO;
+import com.free.easyLearn.entity.User;
+import com.free.easyLearn.exception.BadRequestException;
+import com.free.easyLearn.repository.UserRepository;
 import com.free.easyLearn.service.ProfessorService;
+import com.free.easyLearn.service.RoomService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,6 +19,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -26,6 +33,26 @@ public class ProfessorController {
 
     @Autowired
     private ProfessorService professorService;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private RoomService roomService;
+
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('PROFESSOR')")
+    @Operation(summary = "Mon profil professeur", description = "Récupère le profil du professeur connecté")
+    public ResponseEntity<ApiResponse<ProfessorDTO>> getMyProfile() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+
+        User user = userRepository.findByEmail(username)
+                .orElseThrow(() -> new BadRequestException("User not found"));
+
+        ProfessorDTO professor = professorService.getProfessorByUserId(user.getId());
+        return ResponseEntity.ok(ApiResponse.success("Professor profile retrieved", professor));
+    }
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -79,6 +106,28 @@ public class ProfessorController {
                 .page(page)
                 .limit(size)
                 .totalPages(professors.getTotalPages())
+                .build();
+
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/{userId}/sessions")
+    @Operation(summary = "Sessions d'un professeur", description = "Récupère les sessions d'un professeur par son userId")
+    public ResponseEntity<ApiResponse<PageResponse<RoomDTO>>> getProfessorSessions(
+            @PathVariable UUID userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "scheduledAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortOrder
+    ) {
+        Page<RoomDTO> rooms = roomService.getMyRooms(userId, User.UserRole.PROFESSOR, page, size, sortBy, sortOrder);
+
+        PageResponse<RoomDTO> response = PageResponse.<RoomDTO>builder()
+                .data(rooms.getContent())
+                .total(rooms.getTotalElements())
+                .page(page)
+                .limit(size)
+                .totalPages(rooms.getTotalPages())
                 .build();
 
         return ResponseEntity.ok(ApiResponse.success(response));

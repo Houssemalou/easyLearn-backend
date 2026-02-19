@@ -1,4 +1,5 @@
 package com.free.easyLearn.entity;
+
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -17,38 +18,38 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 public class User {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
-    
+
     @Column(nullable = true, unique = true)
     private String email;
-    
+
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
-    
+
     @Column(nullable = false)
     private String name;
-    
+
     @Column(length = 500)
     private String avatar;
-    
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserRole role;
-    
+
     @Column(name = "is_active")
     private Boolean isActive = true;
-    
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-    
+
     @LastModifiedDate
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-    
+
     public enum UserRole {
         ADMIN, PROFESSOR, STUDENT
     }

@@ -47,7 +47,7 @@ public class StatsController {
     @GetMapping("/admin")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Get admin dashboard statistics",
-               description = "Returns all statistics for the admin dashboard including counts, live rooms, recent students")
+            description = "Returns all statistics for the admin dashboard including counts, live rooms, recent students")
     public ResponseEntity<ApiResponse<AdminStatsDTO>> getAdminStats() {
         AdminStatsDTO stats = statsService.getAdminStats();
         return ResponseEntity.ok(ApiResponse.success("Admin stats retrieved", stats));
@@ -60,7 +60,7 @@ public class StatsController {
     @GetMapping("/professor")
     @PreAuthorize("hasRole('PROFESSOR')")
     @Operation(summary = "Get professor dashboard statistics",
-               description = "Returns statistics for the logged-in professor's dashboard")
+            description = "Returns statistics for the logged-in professor's dashboard")
     public ResponseEntity<ApiResponse<ProfessorStatsDTO>> getProfessorStats() {
         User user = getCurrentUser();
         Professor professor = professorRepository.findByUserId(user.getId())
@@ -76,7 +76,7 @@ public class StatsController {
     @GetMapping("/student")
     @PreAuthorize("hasRole('STUDENT')")
     @Operation(summary = "Get student dashboard statistics",
-               description = "Returns statistics for the logged-in student's dashboard")
+            description = "Returns statistics for the logged-in student's dashboard")
     public ResponseEntity<ApiResponse<StudentStatsDTO>> getStudentStats() {
         User user = getCurrentUser();
         Student student = studentRepository.findByUserId(user.getId())

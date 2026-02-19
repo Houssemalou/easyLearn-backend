@@ -142,7 +142,7 @@ public class RoomService {
         Pageable pageable = PageRequest.of(page, size, sort);
 
         Page<Room> rooms;
-        
+
         if (userRole == User.UserRole.PROFESSOR) {
             // Get rooms where user is the assigned professor
             Professor professor = professorRepository.findByUserId(userId)
@@ -226,7 +226,7 @@ public class RoomService {
         // Check if scheduled time has arrived (allow 15 minutes before scheduled time)
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime allowedStartTime = room.getScheduledAt().minusMinutes(15);
-        
+
         if (now.isBefore(allowedStartTime)) {
             throw new BadRequestException("Cannot start room before scheduled time. Scheduled at: " + room.getScheduledAt());
         }
@@ -273,7 +273,7 @@ public class RoomService {
         // Check if scheduled time has arrived (allow 15 minutes before)
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime allowedJoinTime = room.getScheduledAt().minusMinutes(15);
-        
+
         if (now.isBefore(allowedJoinTime)) {
             throw new BadRequestException("Cannot join room before scheduled time. Scheduled at: " + room.getScheduledAt());
         }
@@ -287,18 +287,18 @@ public class RoomService {
         if (userRole == User.UserRole.PROFESSOR) {
             Professor professor = professorRepository.findByUserId(userId)
                     .orElseThrow(() -> new ResourceNotFoundException("Professor profile not found"));
-            
+
             if (room.getProfessor() == null || !room.getProfessor().getId().equals(professor.getId())) {
                 throw new BadRequestException("You are not assigned to this room");
             }
-        } 
+        }
         // For students: check if they are invited
         else if (userRole == User.UserRole.STUDENT) {
             Student student = studentRepository.findByUserId(userId)
                     .orElseThrow(() -> new ResourceNotFoundException("Student profile not found"));
-            
+
             Optional<RoomParticipant> participantOpt = participantRepository.findByRoomIdAndStudentId(roomId, student.getId());
-            
+
             if (participantOpt.isEmpty() || !participantOpt.get().getInvited()) {
                 throw new BadRequestException("You are not invited to this room");
             }
@@ -318,10 +318,10 @@ public class RoomService {
         if (userRole == User.UserRole.STUDENT) {
             Student student = studentRepository.findByUserId(userId)
                     .orElseThrow(() -> new ResourceNotFoundException("Student profile not found"));
-            
+
             RoomParticipant participant = participantRepository.findByRoomIdAndStudentId(roomId, student.getId())
                     .orElseThrow(() -> new ResourceNotFoundException("Participant not found"));
-            
+
             if (participant.getJoinedAt() == null) {
                 participant.setJoinedAt(LocalDateTime.now());
                 participantRepository.save(participant);
@@ -370,13 +370,13 @@ public class RoomService {
         if (userByEmail.isPresent()) {
             return userByEmail.get();
         }
-        
+
         // Si non trouvé, essayer de trouver un étudiant par uniqueCode (numéro de téléphone)
         Optional<Student> studentByUniqueCode = studentRepository.findByUniqueCode(email);
         if (studentByUniqueCode.isPresent()) {
             return studentByUniqueCode.get().getUser();
         }
-        
+
         throw new ResourceNotFoundException("User not found with email: " + email);
     }
 

@@ -22,7 +22,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -58,7 +57,7 @@ public class AuthService {
                 .orElseThrow(() -> new BadRequestException("Invalid access token"));
 
         if (accessToken.getIsUsed() || accessToken.getExpiresAt().isBefore(LocalDateTime.now()) ||
-            !accessToken.getRole().equals(AccessToken.UserRole.STUDENT)) {
+                !accessToken.getRole().equals(AccessToken.UserRole.STUDENT)) {
             throw new BadRequestException("Invalid or expired access token");
         }
 
@@ -119,7 +118,7 @@ public class AuthService {
                 .orElseThrow(() -> new BadRequestException("Invalid access token"));
 
         if (accessToken.getIsUsed() || accessToken.getExpiresAt().isBefore(LocalDateTime.now()) ||
-            !accessToken.getRole().equals(AccessToken.UserRole.PROFESSOR)) {
+                !accessToken.getRole().equals(AccessToken.UserRole.PROFESSOR)) {
             throw new BadRequestException("Invalid or expired access token");
         }
 
@@ -179,7 +178,7 @@ public class AuthService {
                 .orElseThrow(() -> new BadRequestException("Invalid access token"));
 
         if (accessToken.getIsUsed() || accessToken.getExpiresAt().isBefore(LocalDateTime.now()) ||
-            !accessToken.getRole().equals(AccessToken.UserRole.ADMIN)) {
+                !accessToken.getRole().equals(AccessToken.UserRole.ADMIN)) {
             throw new BadRequestException("Invalid or expired access token");
         }
 
@@ -321,11 +320,11 @@ public class AuthService {
             throw new BadRequestException("Invalid refresh token");
         }
     }
-    
+
     public AuthResponse getCurrentUser(UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BadRequestException("User not found"));
-        
+
         return AuthResponse.builder()
                 .userId(user.getId())
                 .email(user.getEmail())
@@ -357,7 +356,12 @@ public class AuthService {
     public List<AccessToken> getAvailableAccessTokens(AccessToken.UserRole role) {
         return accessTokenRepository.findByRoleAndIsUsedFalseAndExpiresAtAfter(role, LocalDateTime.now());
     }
-    
+
+    public Student findStudentByUniqueCode(String uniqueCode) {
+        return studentRepository.findByUniqueCode(uniqueCode)
+                .orElseThrow(() -> new BadRequestException("Student not found with code: " + uniqueCode));
+    }
+
     public void logout(UUID userId) {
         // TODO: Invalider les refresh tokens de l'utilisateur en base
         // Pour l'instant, le client doit simplement supprimer ses tokens localement

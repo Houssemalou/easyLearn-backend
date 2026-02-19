@@ -6,6 +6,10 @@ import com.free.easyLearn.dto.student.CreateStudentRequest;
 import com.free.easyLearn.dto.student.StudentDTO;
 import com.free.easyLearn.dto.student.UpdateStudentRequest;
 import com.free.easyLearn.entity.Student;
+import com.free.easyLearn.entity.User;
+import com.free.easyLearn.exception.BadRequestException;
+import com.free.easyLearn.repository.StudentRepository;
+import com.free.easyLearn.repository.UserRepository;
 import com.free.easyLearn.service.StudentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -15,6 +19,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,6 +34,31 @@ public class StudentController {
 
     @Autowired
     private StudentService studentService;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private StudentRepository studentRepository;
+
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('STUDENT')")
+    @Operation(summary = "Mon profil étudiant", description = "Récupère le profil de l'étudiant connecté")
+    public ResponseEntity<ApiResponse<StudentDTO>> getMyProfile() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+
+        // Students use uniqueCode as username
+        User user = userRepository.findByEmail(username)
+                .orElseGet(() -> {
+                    Student student = studentRepository.findByUniqueCode(username)
+                            .orElseThrow(() -> new BadRequestException("User not found"));
+                    return student.getUser();
+                });
+
+        StudentDTO student = studentService.getStudentByUserId(user.getId());
+        return ResponseEntity.ok(ApiResponse.success("Student profile retrieved", student));
+    }
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")

@@ -1,9 +1,9 @@
 package com.free.easyLearn.security;
 
-import com.free.easyLearn.entity.User;
 import com.free.easyLearn.entity.Student;
-import com.free.easyLearn.repository.UserRepository;
+import com.free.easyLearn.entity.User;
 import com.free.easyLearn.repository.StudentRepository;
+import com.free.easyLearn.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;

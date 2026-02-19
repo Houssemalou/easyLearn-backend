@@ -3,12 +3,9 @@ package com.free.easyLearn.controller;
 import com.free.easyLearn.dto.common.ApiResponse;
 import com.free.easyLearn.dto.common.PageResponse;
 import com.free.easyLearn.dto.room.*;
-import com.free.easyLearn.entity.Room;
-import com.free.easyLearn.entity.Student;
 import com.free.easyLearn.entity.User;
 import com.free.easyLearn.service.RoomService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -20,7 +17,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -113,7 +109,7 @@ public class RoomController {
         String email = authentication.getName();
         // Get user details from authentication
         User user = roomService.getUserByEmail(email);
-        
+
         Page<RoomDTO> rooms = roomService.getMyRooms(user.getId(), user.getRole(), page, size, sortBy, sortOrder);
 
         PageResponse<RoomDTO> response = PageResponse.<RoomDTO>builder()
@@ -141,7 +137,7 @@ public class RoomController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication.getName();
         User user = roomService.getUserByEmail(email);
-        
+
         try {
             boolean canJoin = roomService.canJoinRoom(id, user.getId(), user.getRole());
             return ResponseEntity.ok(ApiResponse.success(canJoin));
@@ -156,13 +152,13 @@ public class RoomController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication.getName();
         User user = roomService.getUserByEmail(email);
-        
+
         // Validate can join (will throw exception if not allowed)
         roomService.canJoinRoom(id, user.getId(), user.getRole());
-        
+
         // Record join
         roomService.recordJoin(id, user.getId(), user.getRole());
-        
+
         return ResponseEntity.ok(ApiResponse.success("Joined room successfully", null));
     }
 
@@ -196,8 +192,8 @@ public class RoomController {
     @PostMapping("/participants/mute")
     @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSOR')")
     @Operation(
-        summary = "Muter/Démuter un participant",
-        description = "Permet au professeur de couper le micro d'un étudiant"
+            summary = "Muter/Démuter un participant",
+            description = "Permet au professeur de couper le micro d'un étudiant"
     )
     public ResponseEntity<ApiResponse<ParticipantDTO>> muteParticipant(
             @Valid @RequestBody ParticipantActionRequest request
@@ -209,8 +205,8 @@ public class RoomController {
     @PostMapping("/participants/ping")
     @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSOR')")
     @Operation(
-        summary = "Pinger un participant",
-        description = "Envoie une notification d'attention à un étudiant"
+            summary = "Pinger un participant",
+            description = "Envoie une notification d'attention à un étudiant"
     )
     public ResponseEntity<ApiResponse<ParticipantDTO>> pingParticipant(
             @Valid @RequestBody ParticipantActionRequest request

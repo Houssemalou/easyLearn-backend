@@ -5,21 +5,11 @@ import com.free.easyLearn.dto.livekit.LiveKitTokenResponse;
 import com.free.easyLearn.entity.LiveKitToken;
 import com.free.easyLearn.entity.Room;
 import com.free.easyLearn.entity.User;
-import com.free.easyLearn.exception.BadRequestException;
 import com.free.easyLearn.exception.ResourceNotFoundException;
 import com.free.easyLearn.repository.LiveKitTokenRepository;
 import com.free.easyLearn.repository.RoomRepository;
 import com.free.easyLearn.repository.UserRepository;
-import io.livekit.server.AccessToken;
-import io.livekit.server.CanPublish;
-import io.livekit.server.CanPublishData;
-import io.livekit.server.CanSubscribe;
-import io.livekit.server.RoomJoin;
-import io.livekit.server.RoomName;
-import io.livekit.server.RoomServiceClient;
-import io.livekit.server.WebhookReceiver;
-import livekit.LivekitModels;
-import livekit.LivekitRoom;
+import io.livekit.server.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -28,9 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 @Service
 public class LiveKitService {
@@ -88,8 +76,8 @@ public class LiveKitService {
         }
 
         // Determine if user is professor (can publish video/audio) or student (can only subscribe)
-        boolean canPublish = user.getRole() == User.UserRole.ADMIN || 
-                            user.getRole() == User.UserRole.PROFESSOR;
+        boolean canPublish = user.getRole() == User.UserRole.ADMIN ||
+                user.getRole() == User.UserRole.PROFESSOR;
 
         // Create access token
         String identity = user.getName();
@@ -101,14 +89,14 @@ public class LiveKitService {
         token.setName(user.getName());
         token.setIdentity(identity);
         token.setTtl(tokenExpiration);
-        
+
         // Add video grants with proper permissions
         token.addGrants(
-            new RoomJoin(true),
-            new RoomName(room.getLivekitRoomName()),
-            new CanPublish(true),
-            new CanSubscribe(true),
-            new CanPublishData(true)
+                new RoomJoin(true),
+                new RoomName(room.getLivekitRoomName()),
+                new CanPublish(true),
+                new CanSubscribe(true),
+                new CanPublishData(true)
         );
 
         String jwt = token.toJwt();
