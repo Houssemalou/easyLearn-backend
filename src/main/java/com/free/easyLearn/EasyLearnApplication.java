@@ -12,9 +12,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 public class EasyLearnApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(EasyLearnApplication.class, args);
-		System.out.println("EasyLearn Application Started Successfully!");
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(EasyLearnApplication.class, args);
+        System.out.println("EasyLearn Application Started Successfully!");
+    }
 
 }

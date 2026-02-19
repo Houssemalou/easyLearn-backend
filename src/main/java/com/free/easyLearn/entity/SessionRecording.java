@@ -7,7 +7,7 @@
 //import lombok.NoArgsConstructor;
 //import java.time.LocalDateTime;
 //
-///**
+/// **
 // * SessionRecording Entity
 // * Stores metadata for LiveKit session recordings stored in MinIO
 // */

@@ -38,7 +38,7 @@ public class EvaluationController {
     @PostMapping
     @PreAuthorize("hasRole('PROFESSOR')")
     @Operation(summary = "Créer une évaluation",
-               description = "Le professeur évalue un étudiant sur une langue donnée")
+            description = "Le professeur évalue un étudiant sur une langue donnée")
     public ResponseEntity<ApiResponse<EvaluationDTO>> createEvaluation(
             @Valid @RequestBody CreateEvaluationRequest request) {
         User user = getCurrentUser();
@@ -49,7 +49,7 @@ public class EvaluationController {
     @GetMapping("/my-evaluations")
     @PreAuthorize("hasRole('PROFESSOR')")
     @Operation(summary = "Mes évaluations - Professeur",
-               description = "Récupérer toutes les évaluations créées par le professeur connecté")
+            description = "Récupérer toutes les évaluations créées par le professeur connecté")
     public ResponseEntity<ApiResponse<List<EvaluationDTO>>> getMyCreatedEvaluations() {
         User user = getCurrentUser();
         List<EvaluationDTO> evaluations = evaluationService.getEvaluationsByProfessor(user.getId());
@@ -59,7 +59,7 @@ public class EvaluationController {
     @GetMapping("/students")
     @PreAuthorize("hasRole('PROFESSOR')")
     @Operation(summary = "Liste des étudiants",
-               description = "Récupérer la liste de tous les étudiants pour évaluation")
+            description = "Récupérer la liste de tous les étudiants pour évaluation")
     public ResponseEntity<ApiResponse<List<StudentDTO>>> getAllStudents() {
         List<StudentDTO> students = evaluationService.getAllStudents();
         return ResponseEntity.ok(ApiResponse.success(students));
@@ -68,7 +68,7 @@ public class EvaluationController {
     @PutMapping("/update-level")
     @PreAuthorize("hasRole('PROFESSOR')")
     @Operation(summary = "Changer le niveau d'un étudiant",
-               description = "Le professeur change le niveau CECR d'un étudiant (A1→C2)")
+            description = "Le professeur change le niveau CECR d'un étudiant (A1→C2)")
     public ResponseEntity<ApiResponse<StudentDTO>> updateStudentLevel(
             @Valid @RequestBody UpdateStudentLevelRequest request) {
         User user = getCurrentUser();
@@ -83,7 +83,7 @@ public class EvaluationController {
     @GetMapping("/my-results")
     @PreAuthorize("hasRole('STUDENT')")
     @Operation(summary = "Mes évaluations - Étudiant",
-               description = "Récupérer toutes les évaluations reçues par l'étudiant connecté")
+            description = "Récupérer toutes les évaluations reçues par l'étudiant connecté")
     public ResponseEntity<ApiResponse<List<EvaluationDTO>>> getMyEvaluations() {
         User user = getCurrentUser();
         List<EvaluationDTO> evaluations = evaluationService.getEvaluationsForStudent(user.getId());
@@ -93,7 +93,7 @@ public class EvaluationController {
     @GetMapping("/my-results/{language}")
     @PreAuthorize("hasRole('STUDENT')")
     @Operation(summary = "Mes évaluations par langue",
-               description = "Filtrer les évaluations par langue")
+            description = "Filtrer les évaluations par langue")
     public ResponseEntity<ApiResponse<List<EvaluationDTO>>> getMyEvaluationsByLanguage(
             @PathVariable String language) {
         User user = getCurrentUser();

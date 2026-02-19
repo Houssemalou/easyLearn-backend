@@ -17,27 +17,27 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 public class StudentSkills {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
-    
+
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id", nullable = false, unique = true)
     private Student student;
-    
+
     @Column(nullable = false)
     private Integer pronunciation = 0;
-    
+
     @Column(nullable = false)
     private Integer grammar = 0;
-    
+
     @Column(nullable = false)
     private Integer vocabulary = 0;
-    
+
     @Column(nullable = false)
     private Integer fluency = 0;
-    
+
     @LastModifiedDate
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;

@@ -6,16 +6,16 @@ import lombok.Data;
 
 @Data
 public class UpdateStudentRequest {
-    
+
     @Size(min = 2, max = 255)
     private String name;
-    
+
     @Size(min = 2, max = 100)
     private String nickname;
-    
+
     private String bio;
-    
+
     private String avatar;
-    
+
     private Student.LanguageLevel level;
 }

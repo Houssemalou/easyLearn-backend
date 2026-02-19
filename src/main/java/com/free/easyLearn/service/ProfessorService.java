@@ -70,7 +70,7 @@ public class ProfessorService {
                 .orElseThrow(() -> new ResourceNotFoundException("Professor not found"));
 
         User user = professor.getUser();
-        
+
         if (request.getName() != null) user.setName(request.getName());
         if (request.getAvatar() != null) user.setAvatar(request.getAvatar());
         if (request.getLanguages() != null) professor.setLanguages(request.getLanguages());
@@ -86,7 +86,7 @@ public class ProfessorService {
     public void deleteProfessor(UUID professorId) {
         Professor professor = professorRepository.findById(professorId)
                 .orElseThrow(() -> new ResourceNotFoundException("Professor not found"));
-        
+
         User user = professor.getUser();
         professorRepository.delete(professor);
         userRepository.delete(user);
@@ -98,7 +98,13 @@ public class ProfessorService {
         return mapToDTO(professor);
     }
 
-public Page<ProfessorDTO> getProfessors(int page, int size, String sortBy, String sortOrder) {
+    public ProfessorDTO getProfessorByUserId(UUID userId) {
+        Professor professor = professorRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Professor not found for this user"));
+        return mapToDTO(professor);
+    }
+
+    public Page<ProfessorDTO> getProfessors(int page, int size, String sortBy, String sortOrder) {
         Sort sort = sortOrder.equalsIgnoreCase("desc")
                 ? Sort.by(sortBy).descending()
                 : Sort.by(sortBy).ascending();

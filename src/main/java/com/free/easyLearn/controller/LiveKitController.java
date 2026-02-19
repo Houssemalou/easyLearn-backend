@@ -32,24 +32,24 @@ public class LiveKitController {
 
     @PostMapping("/token")
     @Operation(
-        summary = "Générer un token d'accès LiveKit",
-        description = "Génère un token JWT pour permettre à un utilisateur de rejoindre une room LiveKit. " +
-                     "Le token contient les permissions pour publier/recevoir audio/vidéo et données."
+            summary = "Générer un token d'accès LiveKit",
+            description = "Génère un token JWT pour permettre à un utilisateur de rejoindre une room LiveKit. " +
+                    "Le token contient les permissions pour publier/recevoir audio/vidéo et données."
     )
     @ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "200",
-            description = "Token généré avec succès",
-            content = @Content(schema = @Schema(implementation = LiveKitTokenResponse.class))
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "404",
-            description = "Room ou utilisateur introuvable"
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "401",
-            description = "Non authentifié"
-        )
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Token généré avec succès",
+                    content = @Content(schema = @Schema(implementation = LiveKitTokenResponse.class))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "Room ou utilisateur introuvable"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "Non authentifié"
+            )
     })
     public ResponseEntity<ApiResponse<LiveKitTokenResponse>> generateToken(
             @Valid @RequestBody LiveKitTokenRequest request
@@ -63,19 +63,19 @@ public class LiveKitController {
 
     @PostMapping("/webhook")
     @Operation(
-        summary = "Webhook LiveKit",
-        description = "Endpoint pour recevoir les événements webhook de LiveKit (participant rejoint/quitte, etc.)",
-        security = {}
+            summary = "Webhook LiveKit",
+            description = "Endpoint pour recevoir les événements webhook de LiveKit (participant rejoint/quitte, etc.)",
+            security = {}
     )
     @ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "200",
-            description = "Webhook traité avec succès"
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "401",
-            description = "Signature invalide"
-        )
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Webhook traité avec succès"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "Signature invalide"
+            )
     })
     public ResponseEntity<String> handleWebhook(
             @Parameter(description = "Token de signature du webhook")

@@ -5,9 +5,13 @@ import com.free.easyLearn.dto.evaluation.EvaluationDTO;
 import com.free.easyLearn.dto.evaluation.UpdateStudentLevelRequest;
 import com.free.easyLearn.dto.student.StudentDTO;
 import com.free.easyLearn.dto.student.StudentSkillsDTO;
-import com.free.easyLearn.entity.*;
+import com.free.easyLearn.entity.Evaluation;
+import com.free.easyLearn.entity.Professor;
+import com.free.easyLearn.entity.Student;
 import com.free.easyLearn.exception.ResourceNotFoundException;
-import com.free.easyLearn.repository.*;
+import com.free.easyLearn.repository.EvaluationRepository;
+import com.free.easyLearn.repository.ProfessorRepository;
+import com.free.easyLearn.repository.StudentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,10 +42,10 @@ public class EvaluationService {
 
         // Calculate overall score (weighted average)
         int overallScore = (int) Math.round(
-            request.getPronunciation() * 0.25 +
-            request.getGrammar() * 0.25 +
-            request.getVocabulary() * 0.25 +
-            request.getFluency() * 0.25
+                request.getPronunciation() * 0.25 +
+                        request.getGrammar() * 0.25 +
+                        request.getVocabulary() * 0.25 +
+                        request.getFluency() * 0.25
         );
 
         Student.LanguageLevel previousLevel = student.getLevel();
@@ -72,6 +76,7 @@ public class EvaluationService {
         return mapToDTO(evaluation, previousLevel);
     }
 
+    @Transactional(readOnly = true)
     public List<EvaluationDTO> getEvaluationsByProfessor(UUID professorUserId) {
         List<Evaluation> evaluations = evaluationRepository.findByProfessorUserId(professorUserId);
         return evaluations.stream()
@@ -79,6 +84,7 @@ public class EvaluationService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<EvaluationDTO> getEvaluationsForStudent(UUID studentUserId) {
         List<Evaluation> evaluations = evaluationRepository.findByStudentUserId(studentUserId);
         return evaluations.stream()
@@ -86,6 +92,7 @@ public class EvaluationService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<EvaluationDTO> getEvaluationsForStudentByLanguage(UUID studentUserId, String language) {
         Student student = studentRepository.findByUserId(studentUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
@@ -110,6 +117,7 @@ public class EvaluationService {
         return mapStudentToDTO(student);
     }
 
+    @Transactional(readOnly = true)
     public List<StudentDTO> getAllStudents() {
         List<Student> students = studentRepository.findAll();
         return students.stream()

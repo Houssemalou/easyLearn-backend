@@ -1,10 +1,12 @@
 package com.free.easyLearn.dto.evaluation;
 
 import com.free.easyLearn.entity.Student;
-import jakarta.validation.constraints.*;
-import lombok.*;
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-import java.util.List;
 import java.util.UUID;
 
 @Data

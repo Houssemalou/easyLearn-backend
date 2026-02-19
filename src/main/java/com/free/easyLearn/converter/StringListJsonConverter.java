@@ -33,7 +33,8 @@ public class StringListJsonConverter implements AttributeConverter<List<String>,
             return Collections.emptyList();
         }
         try {
-            return objectMapper.readValue(dbData, new TypeReference<List<String>>() {});
+            return objectMapper.readValue(dbData, new TypeReference<List<String>>() {
+            });
         } catch (IOException e) {
             throw new IllegalArgumentException("Error reading JSON from DB", e);
         }

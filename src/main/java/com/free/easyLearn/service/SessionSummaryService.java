@@ -8,16 +8,11 @@ import com.free.easyLearn.entity.SessionSummary;
 import com.free.easyLearn.entity.Student;
 import com.free.easyLearn.exception.BadRequestException;
 import com.free.easyLearn.exception.ResourceNotFoundException;
-import com.free.easyLearn.repository.ProfessorRepository;
-import com.free.easyLearn.repository.RoomRepository;
-import com.free.easyLearn.repository.SessionSummaryRepository;
-import com.free.easyLearn.repository.StudentRepository;
-import com.free.easyLearn.repository.RoomParticipantRepository;
+import com.free.easyLearn.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -30,13 +25,13 @@ public class SessionSummaryService {
 
     @Autowired
     private RoomRepository roomRepository;
-    
+
     @Autowired
     private ProfessorRepository professorRepository;
-    
+
     @Autowired
     private StudentRepository studentRepository;
-    
+
     @Autowired
     private RoomParticipantRepository roomParticipantRepository;
 
@@ -44,22 +39,22 @@ public class SessionSummaryService {
     public SessionSummaryDTO createOrUpdateSummary(UUID userId, CreateSessionSummaryRequest request) {
         Room room = roomRepository.findById(UUID.fromString(request.getRoomId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Room not found: " + request.getRoomId()));
-        
+
         Professor professor = professorRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Professor not found"));
-        
+
         // Verify professor is assigned to this room
         if (room.getProfessor() != null && !room.getProfessor().getId().equals(professor.getId())) {
             throw new BadRequestException("You are not the professor of this session");
         }
-        
+
         // Check if summary already exists
         SessionSummary summary = summaryRepository.findByRoomId(room.getId())
                 .orElse(SessionSummary.builder()
                         .room(room)
                         .professor(professor)
                         .build());
-        
+
         // Update summary fields
         summary.setSummary(request.getSummary());
         summary.setKeyTopics(request.getKeyTopics());
@@ -75,7 +70,7 @@ public class SessionSummaryService {
         summary.setVocabularyScore(request.getVocabularyScore());
         summary.setFluencyScore(request.getFluencyScore());
         summary.setParticipationScore(request.getParticipationScore());
-        
+
         summary = summaryRepository.save(summary);
         return mapToDTO(summary);
     }
@@ -85,39 +80,39 @@ public class SessionSummaryService {
                 .orElseThrow(() -> new ResourceNotFoundException("Summary not found for room: " + roomId));
         return mapToDTO(summary);
     }
-    
+
     public List<SessionSummaryDTO> getSummariesByRoomIds(List<UUID> roomIds) {
         List<SessionSummary> summaries = summaryRepository.findByRoomIdIn(roomIds);
         return summaries.stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
-    
+
     public List<SessionSummaryDTO> getSummariesByProfessor(UUID userId) {
         Professor professor = professorRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Professor not found"));
-        
+
         List<SessionSummary> summaries = summaryRepository.findByProfessorId(professor.getId());
         return summaries.stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
-    
+
     public List<SessionSummaryDTO> getSummariesForStudent(UUID userId) {
         Student student = studentRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
-        
+
         // Find all rooms where the student participated
         List<UUID> roomIds = roomParticipantRepository.findByStudentId(student.getId())
                 .stream()
                 .map(participant -> participant.getRoom().getId())
                 .collect(Collectors.toList());
-        
+
         // Get summaries for these rooms
         if (roomIds.isEmpty()) {
             return List.of();
         }
-        
+
         List<SessionSummary> summaries = summaryRepository.findByRoomIdIn(roomIds);
         return summaries.stream()
                 .map(this::mapToDTO)
