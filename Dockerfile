@@ -1,12 +1,11 @@
 # Multi-stage Dockerfile for EasyLearn backend
 # Stage 1: build the fat jar using Maven
-FROM maven:3.8.8-openjdk-17 AS builder
+FROM maven:3.8.4-openjdk-17 AS builder
 WORKDIR /workspace
 
 # Copy Maven wrapper & pom to leverage layer caching for dependencies
 COPY pom.xml ./
-COPY .mvn .mvn
-COPY mvnw mvnw
+
 
 # Pre-download dependencies
 RUN mvn -B -f pom.xml -DskipTests dependency:go-offline
