@@ -1,18 +1,21 @@
 spring:
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:lingua_hub}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:lingua_hub}
     username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:postgres}
+    password: ${DB_PASSWORD:lingua123456}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: ${DB_MAX_POOL_SIZE:10}
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: create
     show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    baseline-on-migrate: true
+    enabled: false
 
 server:
   port: ${PORT:8081}
@@ -40,6 +43,3 @@ livekit:
   api-key: ${LIVEKIT_API_KEY}
   api-secret: ${LIVEKIT_API_SECRET}
   url: ${LIVEKIT_URL}
-
-
-
