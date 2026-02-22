@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:lingua_hub}
+    url: jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5433}/${DB_NAME:lingua_hub}
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:lingua123456}
     driver-class-name: org.postgresql.Driver
@@ -8,28 +8,30 @@ spring:
       maximum-pool-size: ${DB_MAX_POOL_SIZE:10}
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
   flyway:
-    baseline-on-migrate: true
+    baseline-on-migrate: false
     enabled: false
+    locations: classpath:db/migration
+    baseline-version: 1
 
 server:
   port: ${PORT:8081}
 
 
 cors:
-  allowed-origins: ${CORS_ORIGINS:http://localhost:8080,http://localhost:8082}
+  allowed-origins: ${CORS_ORIGINS:http://localhost:8080,http://localhost:8082,http://91.134.137.202:80,https://91.134.137.202:443}
   allowed-methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
   allowed-headers: "*"
   allow-credentials: true
 
 
 jwt:
-  secret: ${JWT_SECRET}
+  secret: ${JWT_SECRET:7Fr56MkCSwF0UzHRkGW6CxDqJ7zg0Sq6MmbYRwPcaVa3LO51ltcaCsvlYNipKIEFUKAl9rMOnjdGd0vdCi_syqpGs7qGIQqgxLCFE_d1z6Qvpbagv_QEsG_OMKCrMZo3_LX47HKYUlBDfxzxhZpfo_yRiY6zJ4970hlBhLz9Uh6oz-iRZ4ADkkTaJOpTgB2IStIhVad1Jx8il8J1NQDyMMC0KCoc5DoXli2ihpTLN6VR6PVJxv1OR3RnfCgCUuxCD7CY6W1mKtYTWO1lrYSsE17r2dB8_pCq3tyjjXBSO4Wugvm1I0CHC9nZVMcKpLBLkHeQQqvDPGAfyv_61W1dINVKSL63MTBytSxil7-d7HSBEhwpyX88LAGWK86roc64ae7DXP9aEBrftYrj1v4ZvufcWEnh_BovlYBWPehi6kbIjE8t21j3CrMprES1cHhULy4bs7-V7KEDgtDee-X_13bKV-Vm4-vz5iC2CtdMvWEVyiyXew-VnGWj-fVhG5p2tzZ8nmGjjuNrq-0hmR8sxqOikPUDxjZ8ZVtBadbJBurs7IxG6ws5fSBCdBHKP4AFsiyLteKLUOIUobJkK1t-3Nn6rjlZJVuIfiN6XI5X7unC0xov86cPBcLqHz_kxXXFJUzkbqw-cvDIAV4QWdOloVn48T8C4_S9BTWer65h7Is}
   expiration: 86400000
   refresh-expiration: 604800000
 
@@ -40,6 +42,7 @@ logging:
     com.free.easyLearn: INFO
 
 livekit:
-  api-key: ${LIVEKIT_API_KEY}
-  api-secret: ${LIVEKIT_API_SECRET}
-  url: ${LIVEKIT_URL}
+  api-key: ${LIVEKIT_API_KEY:devkey}
+  api-secret: ${LIVEKIT_API_SECRET:secret}
+  url: ${LIVEKIT_URL:ws://livekit:7880}
+  token-expiration: 14400

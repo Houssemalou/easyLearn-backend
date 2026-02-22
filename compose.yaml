@@ -11,10 +11,10 @@ services:
     ports:
       - "5433:5432"
     networks:
-      - spring-demo
+      - lingua-network
 
 networks:
-  spring-demo:
+  lingua-network:
     driver: bridge
 
 volumes:

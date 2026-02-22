@@ -7,7 +7,7 @@ spring:
   datasource:
     url: jdbc:postgresql://postgres:5432/lingua_hub
     username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:postgres}
+    password: ${DB_PASSWORD:lingua123456}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -20,7 +20,7 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
   flyway:
-    enabled: false
+    enabled: false # Désactiver Flyway au démarrage pour permettre à JPA de créer le schéma
     baseline-on-migrate: false
     baseline-version: 0
     locations: classpath:db/migration
@@ -85,4 +85,3 @@ springdoc:
     default-models-expand-depth: 3
     default-model-expand-depth: 3
   show-actuator: false
-

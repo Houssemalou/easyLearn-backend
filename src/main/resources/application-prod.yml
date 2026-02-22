@@ -26,7 +26,7 @@ cors:
 
 
 jwt:
-  secret: ${JWT_SECRET}
+  secret: ${JWT_SECRET:7Fr56MkCSwF0UzHRkGW6CxDqJ7zg0Sq6MmbYRwPcaVa3LO51ltcaCsvlYNipKIEFUKAl9rMOnjdGd0vdCi_syqpGs7qGIQqgxLCFE_d1z6Qvpbagv_QEsG_OMKCrMZo3_LX47HKYUlBDfxzxhZpfo_yRiY6zJ4970hlBhLz9Uh6oz-iRZ4ADkkTaJOpTgB2IStIhVad1Jx8il8J1NQDyMMC0KCoc5DoXli2ihpTLN6VR6PVJxv1OR3RnfCgCUuxCD7CY6W1mKtYTWO1lrYSsE17r2dB8_pCq3tyjjXBSO4Wugvm1I0CHC9nZVMcKpLBLkHeQQqvDPGAfyv_61W1dINVKSL63MTBytSxil7-d7HSBEhwpyX88LAGWK86roc64ae7DXP9aEBrftYrj1v4ZvufcWEnh_BovlYBWPehi6kbIjE8t21j3CrMprES1cHhULy4bs7-V7KEDgtDee-X_13bKV-Vm4-vz5iC2CtdMvWEVyiyXew-VnGWj-fVhG5p2tzZ8nmGjjuNrq-0hmR8sxqOikPUDxjZ8ZVtBadbJBurs7IxG6ws5fSBCdBHKP4AFsiyLteKLUOIUobJkK1t-3Nn6rjlZJVuIfiN6XI5X7unC0xov86cPBcLqHz_kxXXFJUzkbqw-cvDIAV4QWdOloVn48T8C4_S9BTWer65h7Is}
   expiration: 86400000
   refresh-expiration: 604800000
 
@@ -37,8 +37,9 @@ logging:
     com.free.easyLearn: INFO
 
 livekit:
-  api-key: ${LIVEKIT_API_KEY}
-  api-secret: ${LIVEKIT_API_SECRET}
-  url: ${LIVEKIT_URL}
+  api-key: ${LIVEKIT_API_KEY:devkey}
+  api-secret: ${LIVEKIT_API_SECRET:secret}
+  url: ${LIVEKIT_URL:ws://livekit:7880}
+  token-expiration: 14400
 
 
