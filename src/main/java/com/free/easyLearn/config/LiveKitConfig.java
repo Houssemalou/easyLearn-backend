@@ -19,7 +19,7 @@ public class LiveKitConfig {
 
     @Bean
     public RoomServiceClient roomServiceClient() {
-        String serverUrl = livekitUrl.replace("wss://", "https://");
+        String serverUrl = livekitUrl.replace("wss://", "https://").replace("ws://", "http://");
         return RoomServiceClient.create(serverUrl, apiKey, apiSecret);
     }
 
