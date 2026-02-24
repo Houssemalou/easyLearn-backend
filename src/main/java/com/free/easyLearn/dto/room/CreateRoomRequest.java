@@ -41,6 +41,7 @@ public class CreateRoomRequest {
     @NotNull(message = "Animator type is required")
     private Room.AnimatorType animatorType;
 
+    @NotNull(message = "Professor ID is required")
     private UUID professorId;
 
     private List<UUID> invitedStudents;

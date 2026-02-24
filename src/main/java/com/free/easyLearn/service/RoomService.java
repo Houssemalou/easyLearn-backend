@@ -225,7 +225,7 @@ public class RoomService {
 
         // Check if scheduled time has arrived (allow 15 minutes before scheduled time)
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime allowedStartTime = room.getScheduledAt().minusMinutes(15);
+        LocalDateTime allowedStartTime = room.getScheduledAt().minusMinutes(80);
 
         if (now.isBefore(allowedStartTime)) {
             throw new BadRequestException("Cannot start room before scheduled time. Scheduled at: " + room.getScheduledAt());
