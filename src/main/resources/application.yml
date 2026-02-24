@@ -25,6 +25,16 @@ spring:
     baseline-version: 0
     locations: classpath:db/migration
 
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
   servlet:
     multipart:
       max-file-size: 50MB
@@ -32,6 +42,9 @@ spring:
 
 server:
   port: 8081
+
+app:
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
 
 
 

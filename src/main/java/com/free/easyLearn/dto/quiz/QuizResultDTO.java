@@ -24,4 +24,7 @@ public class QuizResultDTO {
     private Boolean passed;
     private LocalDateTime completedAt;
     private List<QuizAnswerDTO> answers;
+    private String studentAvatar;
+    private String sessionName;
+    private String language;
 }
