@@ -114,6 +114,26 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Admin registration successful", response));
     }
 
+    @GetMapping("/verify-email")
+    @Operation(
+            summary = "Vérifier l'email",
+            description = "Vérifie l'adresse email d'un professeur via le token envoyé par email"
+    )
+    public ResponseEntity<ApiResponse<Void>> verifyEmail(@RequestParam String token) {
+        authService.verifyEmail(token);
+        return ResponseEntity.ok(ApiResponse.success("Email vérifié avec succès", null));
+    }
+
+    @PostMapping("/resend-verification")
+    @Operation(
+            summary = "Renvoyer l'email de vérification",
+            description = "Renvoie un email de vérification à l'adresse spécifiée"
+    )
+    public ResponseEntity<ApiResponse<Void>> resendVerificationEmail(@RequestParam String email) {
+        authService.resendVerificationEmail(email);
+        return ResponseEntity.ok(ApiResponse.success("Email de vérification renvoyé", null));
+    }
+
     @PostMapping("/login")
     @Operation(
             summary = "Connexion utilisateur",
