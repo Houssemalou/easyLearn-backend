@@ -90,6 +90,28 @@ public class ProfessorController {
         return ResponseEntity.ok(ApiResponse.success(professor));
     }
 
+    @GetMapping("/created-by/{createdById}")
+    @Operation(summary = "Liste des professeurs par créateur", description = "Récupère la liste des professeurs créés par un admin (created_by) avec pagination")
+    public ResponseEntity<ApiResponse<PageResponse<ProfessorDTO>>> getProfessorsByCreator(
+            @PathVariable UUID createdById,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "rating") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortOrder
+    ) {
+        Page<ProfessorDTO> professors = professorService.getProfessorsByAdmin(createdById, page, size, sortBy, sortOrder);
+
+        PageResponse<ProfessorDTO> response = PageResponse.<ProfessorDTO>builder()
+                .data(professors.getContent())
+                .total(professors.getTotalElements())
+                .page(page)
+                .limit(size)
+                .totalPages(professors.getTotalPages())
+                .build();
+
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
     @GetMapping
     @Operation(summary = "Liste des professeurs", description = "Récupère la liste de tous les professeurs avec pagination")
     public ResponseEntity<ApiResponse<PageResponse<ProfessorDTO>>> getProfessors(

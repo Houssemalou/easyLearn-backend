@@ -132,11 +132,17 @@ public class StatsService {
                 .map(this::toProfRoomSummary)
                 .collect(Collectors.toList());
 
-        // My students details
+        // My students details: only include students that were created by the same admin/user
+        UUID professorCreatedById = professor.getCreatedBy() != null ? professor.getCreatedBy().getId() : null;
+
         List<ProfessorStatsDTO.StudentSummaryDTO> myStudents = uniqueStudentIds.stream()
                 .map(studentRepository::findById)
                 .filter(Optional::isPresent)
                 .map(Optional::get)
+                .filter(s -> {
+                    if (professorCreatedById == null) return false;
+                    return s.getCreatedBy() != null && professorCreatedById.equals(s.getCreatedBy().getId());
+                })
                 .limit(10)
                 .map(s -> ProfessorStatsDTO.StudentSummaryDTO.builder()
                         .id(s.getId().toString())
@@ -148,7 +154,7 @@ public class StatsService {
                 .collect(Collectors.toList());
 
         return ProfessorStatsDTO.builder()
-                .totalStudents(uniqueStudentIds.size())
+                .totalStudents(myStudents.size())
                 .upcomingSessions(upcomingSessions)
                 .completedSessions(completedSessions)
                 .rating(professor.getRating())

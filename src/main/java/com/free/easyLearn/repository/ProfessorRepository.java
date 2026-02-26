@@ -17,4 +17,7 @@ public interface ProfessorRepository extends JpaRepository<Professor, UUID> {
 
     @Query("SELECT p FROM Professor p ORDER BY p.user.name ASC")
     Page<Professor> findAllProfessors(Pageable pageable);
+
+    @Query("SELECT p FROM Professor p JOIN p.createdBy c WHERE c.id = :adminId ORDER BY p.user.name ASC")
+    Page<Professor> findAllProfessorsByAdmin(java.util.UUID adminId, Pageable pageable);
 }

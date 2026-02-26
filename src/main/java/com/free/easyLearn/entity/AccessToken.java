@@ -39,6 +39,13 @@ public class AccessToken {
     @JoinColumn(name = "created_by")
     private User createdBy;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "used_by", unique = true)
+    private User usedBy;
+
+    @Column(name = "used_at")
+    private LocalDateTime usedAt;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

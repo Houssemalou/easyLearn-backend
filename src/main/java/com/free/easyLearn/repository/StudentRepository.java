@@ -20,6 +20,9 @@ public interface StudentRepository extends JpaRepository<Student, UUID> {
     @Query("SELECT s FROM Student s ORDER BY s.user.name ASC")
     Page<Student> findAllStudents(Pageable pageable);
 
+    @Query("SELECT s FROM Student s JOIN s.createdBy c WHERE c.id = :adminId ORDER BY s.user.name ASC")
+    Page<Student> findAllStudentsByAdmin(java.util.UUID adminId, Pageable pageable);
+
     // Stats queries
     @Query("SELECT s.level, COUNT(s) FROM Student s GROUP BY s.level ORDER BY s.level")
     java.util.List<Object[]> countByLevel();

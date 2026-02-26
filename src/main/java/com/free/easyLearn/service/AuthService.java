@@ -61,9 +61,10 @@ public class AuthService {
             throw new BadRequestException("Invalid or expired access token");
         }
 
-        // Mark token as used
+        // Mark token as used and link to user
         accessToken.setIsUsed(true);
-        accessTokenRepository.save(accessToken);
+        accessToken.setUsedAt(LocalDateTime.now());
+        // usedBy will be set after we create the User (because we need the User reference)
 
         // Check if uniqueCode already exists
         if (studentRepository.findByUniqueCode(request.getUniqueCode()).isPresent()) {
@@ -80,9 +81,12 @@ public class AuthService {
                 .isActive(true)
                 .build();
 
+        // Link createdBy on user to the admin who generated the token
+        user.setCreatedBy(accessToken.getCreatedBy());
+
         user = userRepository.save(user);
 
-        // Create student profile
+        // Create student profile and set createdBy to the admin who generated the token
         Student student = Student.builder()
                 .user(user)
                 .nickname(request.getNickname())
@@ -90,9 +94,18 @@ public class AuthService {
                 .level(Student.LanguageLevel.valueOf(request.getLevel().toUpperCase()))
                 .uniqueCode(request.getUniqueCode())
                 .joinedAt(LocalDateTime.now())
+                .createdBy(accessToken.getCreatedBy())
                 .build();
 
         studentRepository.save(student);
+
+        // Now link token.usedBy
+        accessToken.setUsedBy(user);
+        accessTokenRepository.save(accessToken);
+
+        // Also set user's accessToken reference for bidirectional mapping
+        user.setAccessToken(accessToken);
+        userRepository.save(user);
 
         // Generate tokens using uniqueCode as username for students
         String token = tokenProvider.generateTokenFromUsername(request.getUniqueCode());
@@ -122,9 +135,9 @@ public class AuthService {
             throw new BadRequestException("Invalid or expired access token");
         }
 
-        // Mark token as used
+        // Mark token as used and link to user
         accessToken.setIsUsed(true);
-        accessTokenRepository.save(accessToken);
+        accessToken.setUsedAt(LocalDateTime.now());
 
         // Check if email already exists
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -141,18 +154,30 @@ public class AuthService {
                 .isActive(true)
                 .build();
 
+        // Link createdBy on user to the admin who generated the token
+        user.setCreatedBy(accessToken.getCreatedBy());
+
         user = userRepository.save(user);
 
-        // Create professor profile
+        // Create professor profile and set createdBy to the admin who generated the token
         Professor professor = Professor.builder()
                 .user(user)
                 .bio(request.getBio())
                 .languages(request.getLanguages())
                 .specialization(request.getSpecialization())
                 .joinedAt(LocalDateTime.now())
+                .createdBy(accessToken.getCreatedBy())
                 .build();
 
         professorRepository.save(professor);
+
+        // Now link token.usedBy
+        accessToken.setUsedBy(user);
+        accessTokenRepository.save(accessToken);
+
+        // Also set user's accessToken reference for bidirectional mapping
+        user.setAccessToken(accessToken);
+        userRepository.save(user);
 
         // Generate tokens
         String token = tokenProvider.generateTokenFromUsername(user.getEmail());
@@ -182,9 +207,9 @@ public class AuthService {
             throw new BadRequestException("Invalid or expired access token");
         }
 
-        // Mark token as used
+        // Mark token as used and link to user
         accessToken.setIsUsed(true);
-        accessTokenRepository.save(accessToken);
+        accessToken.setUsedAt(LocalDateTime.now());
 
         // Check if email already exists
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -200,7 +225,18 @@ public class AuthService {
                 .isActive(true)
                 .build();
 
+        // Link createdBy on user to the admin who generated the token
+        user.setCreatedBy(accessToken.getCreatedBy());
+
         user = userRepository.save(user);
+
+        // Now link token.usedBy
+        accessToken.setUsedBy(user);
+        accessTokenRepository.save(accessToken);
+
+        // Also set user's accessToken reference for bidirectional mapping
+        user.setAccessToken(accessToken);
+        userRepository.save(user);
 
         // Generate tokens
         String token = tokenProvider.generateTokenFromUsername(user.getEmail());

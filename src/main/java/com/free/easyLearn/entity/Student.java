@@ -35,7 +35,7 @@ public class Student {
     private String bio;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 2)
+    @Column(nullable = false, length = 10)
     private LanguageLevel level;
 
     @Column(name = "joined_at")
@@ -61,7 +61,25 @@ public class Student {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by")
+    private User createdBy;
+
     public enum LanguageLevel {
-        A1, A2, B1, B2, C1, C2
+        A1,
+        A2,
+        B1,
+        B2,
+        C1,
+        C2,
+        YEAR1,
+        YEAR2,
+        YEAR3,
+        YEAR4,
+        YEAR5,
+        YEAR6,
+        YEAR7,
+        YEAR8,
+        YEAR9
     }
 }

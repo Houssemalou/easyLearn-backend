@@ -116,6 +116,17 @@ public class StudentService {
         return students.map(this::mapToDTO);
     }
 
+    public Page<StudentDTO> getStudentsByAdmin(UUID adminId, int page, int size, String sortBy, String sortOrder) {
+        Sort sort = sortOrder.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Page<Student> students = studentRepository.findAllStudentsByAdmin(adminId, pageable);
+
+        return students.map(this::mapToDTO);
+    }
+
     public List<StudentDTO> getStudentsByIds(List<UUID> studentIds) {
         List<Student> students = studentRepository.findAllById(studentIds);
         return students.stream()

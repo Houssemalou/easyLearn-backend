@@ -50,6 +50,13 @@ public class User {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by")
+    private User createdBy;
+
+    @OneToOne(mappedBy = "usedBy", fetch = FetchType.LAZY)
+    private AccessToken accessToken;
+
     public enum UserRole {
         ADMIN, PROFESSOR, STUDENT
     }

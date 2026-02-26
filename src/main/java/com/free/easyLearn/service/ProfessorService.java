@@ -17,6 +17,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -51,16 +53,24 @@ public class ProfessorService {
         user = userRepository.save(user);
 
         // Create professor
-        Professor professor = Professor.builder()
+        Professor.ProfessorBuilder builder = Professor.builder()
                 .user(user)
                 .languages(request.getLanguages())
                 .specialization(request.getSpecialization())
                 .bio(request.getBio())
                 .rating(BigDecimal.ZERO)
-                .totalSessions(0)
-                .build();
+                .totalSessions(0);
 
-        professor = professorRepository.save(professor);
+        // If there's an authenticated admin creating this professor, set createdBy
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null) {
+                String adminEmail = auth.getName();
+                userRepository.findByEmail(adminEmail).ifPresent(builder::createdBy);
+            }
+        } catch (Exception ignored) {}
+
+        Professor professor = professorRepository.save(builder.build());
         return mapToDTO(professor);
     }
 
@@ -115,6 +125,17 @@ public class ProfessorService {
         return professors.map(this::mapToDTO);
     }
 
+    public Page<ProfessorDTO> getProfessorsByAdmin(UUID adminId, int page, int size, String sortBy, String sortOrder) {
+        Sort sort = sortOrder.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Page<Professor> professors = professorRepository.findAllProfessorsByAdmin(adminId, pageable);
+
+        return professors.map(this::mapToDTO);
+    }
+
     private ProfessorDTO mapToDTO(Professor professor) {
         return ProfessorDTO.builder()
                 .id(professor.getId())
@@ -127,6 +148,7 @@ public class ProfessorService {
                 .rating(professor.getRating())
                 .totalSessions(professor.getTotalSessions())
                 .joinedAt(professor.getCreatedAt())
+                .createdBy(professor.getCreatedBy() != null ? professor.getCreatedBy().getId() : null)
                 .build();
     }
 }

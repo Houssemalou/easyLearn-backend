@@ -27,4 +27,5 @@ public class ProfessorDTO {
     private BigDecimal rating;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private java.util.UUID createdBy;
 }

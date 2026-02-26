@@ -96,15 +96,16 @@ public class StudentController {
         return ResponseEntity.ok(ApiResponse.success(student));
     }
 
-    @GetMapping
-    @Operation(summary = "Liste des étudiants", description = "Récupère la liste de tous les étudiants avec pagination")
-    public ResponseEntity<ApiResponse<PageResponse<StudentDTO>>> getStudents(
+    @GetMapping("/created-by/{createdById}")
+    @Operation(summary = "Liste des étudiants par créateur", description = "Récupère la liste des étudiants créés par un admin (created_by) avec pagination")
+    public ResponseEntity<ApiResponse<PageResponse<StudentDTO>>> getStudentsByCreator(
+            @PathVariable UUID createdById,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortOrder
     ) {
-        Page<StudentDTO> students = studentService.getStudents(page, size, sortBy, sortOrder);
+        Page<StudentDTO> students = studentService.getStudentsByAdmin(createdById, page, size, sortBy, sortOrder);
 
         PageResponse<StudentDTO> response = PageResponse.<StudentDTO>builder()
                 .data(students.getContent())

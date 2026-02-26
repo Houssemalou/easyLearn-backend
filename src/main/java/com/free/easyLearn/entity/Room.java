@@ -33,7 +33,7 @@ public class Room {
     private String language;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 2)
+    @Column(nullable = false, length = 10)
     private Student.LanguageLevel level;
 
     @Column(nullable = false, columnDefinition = "TEXT")
