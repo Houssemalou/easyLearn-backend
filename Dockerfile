@@ -26,6 +26,6 @@ EXPOSE 8081
 
 # Allow overriding JAVA options and Spring profile at runtime.
 # By default the application will run with the 'prod' profile inside the container; you can override SPRING_PROFILES_ACTIVE when running.
-ENV SPRING_PROFILES_ACTIVE=prod
+ENV SPRING_PROFILES_ACTIVE=dev
 
 ENTRYPOINT ["sh", "-c", "java ${JAVA_OPTS:-} -Dspring.profiles.active=${SPRING_PROFILES_ACTIVE} -jar /app/app.jar"]
