@@ -55,6 +55,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
+                        // Allow LiveKit webhook without authentication (controller maps to /livekit/webhook)
+                        .requestMatchers("/livekit/webhook").permitAll()
                         .requestMatchers("/api/livekit/webhook").permitAll()
                         .requestMatchers("/api/rooms/livekit/**").permitAll() // Python service
                         .requestMatchers("/api/sessions/*/summary").permitAll() // Python service

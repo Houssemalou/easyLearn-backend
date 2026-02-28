@@ -11,7 +11,7 @@ public class LiveKitRecordingService {
 
     public LiveKitRecordingService() {
         this.egressClient = EgressServiceClient.createClient(
-                "http://localhost:7880",
+                "http://91.134.137.202:7880",
                 "devkey",
                 "secret"
         );

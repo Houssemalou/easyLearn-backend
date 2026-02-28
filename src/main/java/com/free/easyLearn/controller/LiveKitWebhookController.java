@@ -1,12 +1,15 @@
 package com.free.easyLearn.controller;
 
 import com.free.easyLearn.service.LiveKitRecordingService;
+import com.free.easyLearn.service.RoomService;
+import com.free.easyLearn.dto.room.RoomDTO;
 import livekit.LivekitWebhook.WebhookEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -27,14 +30,23 @@ public class LiveKitWebhookController {
     private static final Logger log = LoggerFactory.getLogger(LiveKitWebhookController.class);
 
     private final LiveKitRecordingService recordingService;
+    private final RoomService roomService;
     private final Map<String, String> activeRecordings = new ConcurrentHashMap<>();
 
-    public LiveKitWebhookController(LiveKitRecordingService service) {
+    public LiveKitWebhookController(LiveKitRecordingService service, RoomService roomService) {
         this.recordingService = service;
+        this.roomService = roomService;
     }
 
     @PostMapping
-    public ResponseEntity<Void> handleWebhook(@RequestBody WebhookEvent event) {
+    public ResponseEntity<Void> handleWebhook(@RequestBody WebhookEvent event,
+                                              @RequestHeader(value = "Authorization", required = false) String authorization) {
+
+        if (authorization != null) {
+            log.debug("Webhook Authorization header present");
+        } else {
+            log.debug("Webhook Authorization header missing or not provided");
+        }
 
         String roomName = null;
         if (event != null && event.hasRoom()) {
@@ -65,6 +77,16 @@ public class LiveKitWebhookController {
                     if (activeRecordings.containsKey(roomName)) {
                         recordingService.stopRecording(activeRecordings.get(roomName));
                         activeRecordings.remove(roomName);
+                    }
+                    // Try to mark the room as COMPLETED in our system
+                    try {
+                        RoomDTO roomDto = roomService.getRoomByLivekitName(roomName);
+                        if (roomDto != null) {
+                            roomService.endRoom(roomDto.getId());
+                            log.info("Marked room {} as COMPLETED via webhook", roomName);
+                        }
+                    } catch (Exception e) {
+                        log.warn("Could not mark room {} as COMPLETED: {}", roomName, e.getMessage());
                     }
                     break;
             }
