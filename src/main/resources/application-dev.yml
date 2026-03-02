@@ -42,7 +42,7 @@ logging:
     com.free.easyLearn: INFO
 
 livekit:
-  api-key: ${LIVEKIT_API_KEY:devkey}
-  api-secret: ${LIVEKIT_API_SECRET:secret}
-  url: ${LIVEKIT_URL:ws://91.134.137.202:7880}
+  api-key: ${LIVEKIT_API_KEY:xcsdzhezhetejszfztsqhz}
+  api-secret: ${LIVEKIT_API_SECRET:hsgdrevsgsfzuaihdsgzfzzjossauzsbdef}
+  url: ${LIVEKIT_URL:ws://livekit:7880}
   token-expiration: 14400
