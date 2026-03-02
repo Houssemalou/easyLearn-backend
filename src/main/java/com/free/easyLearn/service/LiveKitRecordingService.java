@@ -2,18 +2,28 @@ package com.free.easyLearn.service;
 
 import io.livekit.server.EgressServiceClient;
 import livekit.LivekitEgress;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
 public class LiveKitRecordingService {
 
+    @Value("${livekit.url}")
+    private String livekitUrl;
+
+    @Value("${livekit.api-key}")
+    private String apiKey;
+
+    @Value("${livekit.api-secret}")
+    private String apiSecret;
+
     private final EgressServiceClient egressClient;
 
     public LiveKitRecordingService() {
         this.egressClient = EgressServiceClient.createClient(
-                "http://91.134.137.202:7880",
-                "devkey",
-                "secret"
+                livekitUrl.replace("wss://", "https://").replace("ws://", "http://"),
+                apiKey,
+                apiSecret
         );
     }
 
