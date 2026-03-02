@@ -1,6 +1,7 @@
 package com.free.easyLearn.service;
 
 import io.livekit.server.EgressServiceClient;
+import jakarta.annotation.PostConstruct;
 import livekit.LivekitEgress;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -17,9 +18,10 @@ public class LiveKitRecordingService {
     @Value("${livekit.api-secret}")
     private String apiSecret;
 
-    private final EgressServiceClient egressClient;
+    private EgressServiceClient egressClient;
 
-    public LiveKitRecordingService() {
+    @PostConstruct
+    public void init() {
         this.egressClient = EgressServiceClient.createClient(
                 livekitUrl.replace("wss://", "https://").replace("ws://", "http://"),
                 apiKey,
