@@ -4,6 +4,7 @@ import com.free.easyLearn.dto.common.ApiResponse;
 import com.free.easyLearn.dto.livekit.LiveKitTokenRequest;
 import com.free.easyLearn.dto.livekit.LiveKitTokenResponse;
 import com.free.easyLearn.dto.livekit.WebhookEvent;
+import com.free.easyLearn.entity.SessionRecording;
 import com.free.easyLearn.service.LiveKitService;
 import com.free.easyLearn.service.LiveKitRecordingService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -18,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -29,6 +31,9 @@ public class LiveKitController {
 
     @Autowired
     private LiveKitService liveKitService;
+
+    @Autowired
+    private LiveKitRecordingService recordingService;
 
     @PostMapping("/token")
     @Operation(
@@ -61,34 +66,56 @@ public class LiveKitController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
-    @PostMapping("/webhook")
+//    @PostMapping("/webhook")
+//    @Operation(
+//            summary = "Webhook LiveKit",
+//            description = "Endpoint pour recevoir les événements webhook de LiveKit (participant rejoint/quitte, etc.)",
+//            security = {}
+//    )
+//    @ApiResponses(value = {
+//            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+//                    responseCode = "200",
+//                    description = "Webhook traité avec succès"
+//            ),
+//            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+//                    responseCode = "401",
+//                    description = "Signature invalide"
+//            )
+//    })
+//    public ResponseEntity<String> handleWebhook(
+//            @Parameter(description = "Token de signature du webhook")
+//            @RequestHeader("Authorization") String token,
+//            @RequestBody String body
+//    ) {
+//        boolean isValid = liveKitService.validateWebhook(token, body);
+//        if (isValid) {
+//            // Process webhook event
+//            return ResponseEntity.ok("Webhook processed");
+//        } else {
+//            return ResponseEntity.status(401).body("Invalid signature");
+//        }
+//    }
+
+    @GetMapping("/recordings/{roomName}")
     @Operation(
-            summary = "Webhook LiveKit",
-            description = "Endpoint pour recevoir les événements webhook de LiveKit (participant rejoint/quitte, etc.)",
-            security = {}
+            summary = "Récupérer les enregistrements d'une room",
+            description = "Retourne la liste des enregistrements (URL) pour une room LiveKit donnée par son livekitRoomName."
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "200",
-                    description = "Webhook traité avec succès"
+                    description = "Liste des enregistrements"
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "401",
-                    description = "Signature invalide"
+                    responseCode = "404",
+                    description = "Aucun enregistrement trouvé"
             )
     })
-    public ResponseEntity<String> handleWebhook(
-            @Parameter(description = "Token de signature du webhook")
-            @RequestHeader("Authorization") String token,
-            @RequestBody String body
+    public ResponseEntity<ApiResponse<List<SessionRecording>>> getRecordingsByRoom(
+            @PathVariable String roomName
     ) {
-        boolean isValid = liveKitService.validateWebhook(token, body);
-        if (isValid) {
-            // Process webhook event
-            return ResponseEntity.ok("Webhook processed");
-        } else {
-            return ResponseEntity.status(401).body("Invalid signature");
-        }
+        List<SessionRecording> recordings = recordingService.getRecordingsByRoomName(roomName);
+        return ResponseEntity.ok(ApiResponse.success(recordings));
     }
 }
 

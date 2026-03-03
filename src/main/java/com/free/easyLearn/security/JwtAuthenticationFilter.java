@@ -24,6 +24,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Autowired
     private UserDetailsServiceImpl userDetailsService;
 
+    @Autowired
+    private CookieUtil cookieUtil;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
@@ -48,7 +51,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
+    /**
+     * Extract JWT from the request. Priority:
+     * 1. HttpOnly cookie (access_token) — secure, preferred
+     * 2. Authorization: Bearer header — fallback for API clients / mobile
+     */
     private String getJwtFromRequest(HttpServletRequest request) {
+        // 1. Try HttpOnly cookie first (most secure)
+        String tokenFromCookie = cookieUtil.getAccessTokenFromCookies(request);
+        if (StringUtils.hasText(tokenFromCookie)) {
+            return tokenFromCookie;
+        }
+
+        // 2. Fallback to Authorization header (for non-browser clients)
         String bearerToken = request.getHeader("Authorization");
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
             return bearerToken.substring(7);

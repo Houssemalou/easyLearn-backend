@@ -181,22 +181,29 @@ public class AuthService {
 
         // Also set user's accessToken reference for bidirectional mapping
         user.setAccessToken(accessToken);
+
+        // Generate email verification token and send verification email
+        String verificationToken = UUID.randomUUID().toString();
+        user.setEmailVerificationToken(verificationToken);
+        user.setEmailVerificationTokenExpiry(LocalDateTime.now().plusHours(24));
+        user.setEmailVerified(false);
         userRepository.save(user);
 
-        // Generate tokens
-        String token = tokenProvider.generateTokenFromUsername(user.getEmail());
-        String refreshToken = tokenProvider.generateRefreshToken(user.getEmail());
+        try {
+            emailService.sendVerificationEmail(user.getEmail(), user.getName(), verificationToken);
+            log.info("Verification email sent to professor: {}", user.getEmail());
+        } catch (Exception e) {
+            log.error("Failed to send verification email to professor: {}", user.getEmail(), e);
+        }
 
         log.info("Professor registered successfully: {}", user.getEmail());
 
+        // Return response WITHOUT JWT tokens — professor must verify email first
         return AuthResponse.builder()
-                .token(token)
-                .refreshToken(refreshToken)
                 .userId(user.getId())
                 .email(user.getEmail())
                 .name(user.getName())
                 .role(user.getRole().name())
-                .expiresIn(tokenProvider.getJwtExpirationMs())
                 .build();
     }
 
@@ -240,22 +247,29 @@ public class AuthService {
 
         // Also set user's accessToken reference for bidirectional mapping
         user.setAccessToken(accessToken);
+
+        // Generate email verification token and send verification email
+        String verificationToken = UUID.randomUUID().toString();
+        user.setEmailVerificationToken(verificationToken);
+        user.setEmailVerificationTokenExpiry(LocalDateTime.now().plusHours(24));
+        user.setEmailVerified(false);
         userRepository.save(user);
 
-        // Generate tokens
-        String token = tokenProvider.generateTokenFromUsername(user.getEmail());
-        String refreshToken = tokenProvider.generateRefreshToken(user.getEmail());
+        try {
+            emailService.sendVerificationEmail(user.getEmail(), user.getName(), verificationToken);
+            log.info("Verification email sent to admin: {}", user.getEmail());
+        } catch (Exception e) {
+            log.error("Failed to send verification email to admin: {}", user.getEmail(), e);
+        }
 
         log.info("Admin registered successfully: {}", user.getEmail());
 
+        // Return response WITHOUT JWT tokens — admin must verify email first
         return AuthResponse.builder()
-                .token(token)
-                .refreshToken(refreshToken)
                 .userId(user.getId())
                 .email(user.getEmail())
                 .name(user.getName())
                 .role(user.getRole().name())
-                .expiresIn(tokenProvider.getJwtExpirationMs())
                 .build();
     }
 
@@ -312,6 +326,12 @@ public class AuthService {
                             .orElseThrow(() -> new BadRequestException("User not found"));
                     return student.getUser();
                 });
+
+        // Block login for professors and admins who haven't verified their email
+        if ((user.getRole() == User.UserRole.PROFESSOR || user.getRole() == User.UserRole.ADMIN)
+                && !Boolean.TRUE.equals(user.getEmailVerified())) {
+            throw new BadRequestException("Veuillez vérifier votre adresse email avant de vous connecter. Consultez votre boîte de réception.");
+        }
 
         // Generate tokens
         String token = tokenProvider.generateToken(authentication);

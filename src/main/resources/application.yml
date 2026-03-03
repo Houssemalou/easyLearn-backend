@@ -26,14 +26,16 @@ spring:
     locations: classpath:db/migration
 
   mail:
-    host: ${MAIL_HOST:localhost}
-    port: ${MAIL_PORT:1025}
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:aloui9861@gmail.com}
+    password: ${MAIL_PASSWORD:mmghpamoypdkxshq}
     properties:
       mail:
         smtp:
-          auth: false
+          auth: true
           starttls:
-            enable: false
+            enable: true
 
   servlet:
     multipart:
@@ -44,7 +46,7 @@ server:
   port: 8081
 
 app:
-  frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  frontend-url: ${FRONTEND_URL:http://localhost:8080}
 
 
 
@@ -60,14 +62,12 @@ livekit:
   api-secret: ${LIVEKIT_API_SECRET:qzsYKTH3EkKjRflbDXjHpWxuQKsPLBXyuVfkgvKEkuD}
   url: ${LIVEKIT_URL:wss://easylearn-9lc2pn85.livekit.cloud}
   token-expiration: 14400 # 4 hours in seconds
-
-
-# MinIO Configuration
-#minio:
-#  url: ${MINIO_URL:http://localhost:9000}
-#  access-key: ${MINIO_ACCESS_KEY:minioadmin}
-#  secret-key: ${MINIO_SECRET_KEY:minioadmin}
-#  bucket-name: ${MINIO_BUCKET_NAME:lingua-recordings}
+  s3:
+    access-key: ${LIVEKIT_S3_ACCESS_KEY:minioadmin}
+    secret-key: ${LIVEKIT_S3_SECRET_KEY:minioadmin}
+    endpoint: ${LIVEKIT_S3_ENDPOINT:http://91.134.137.202:9000}
+    bucket: ${LIVEKIT_S3_BUCKET:livekit-recordings}
+    region: ${LIVEKIT_S3_REGION:us-east-1}
 
 # CORS Configuration
 cors:
@@ -75,6 +75,12 @@ cors:
   allowed-methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
   allowed-headers: "*"
   allow-credentials: true
+
+# Cookie Configuration (HttpOnly secure cookies for JWT tokens)
+cookie:
+  secure: ${COOKIE_SECURE:false}
+  domain: ${COOKIE_DOMAIN:}
+  same-site: ${COOKIE_SAME_SITE:Lax}
 
 # Logging
 logging:

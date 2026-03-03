@@ -17,11 +17,14 @@ public class EmailService {
     @Value("${app.frontend-url}")
     private String frontendUrl;
 
+    @Value("${spring.mail.username:aloui9861@gmail.com}")
+    private String fromEmail;
+
     public void sendVerificationEmail(String toEmail, String name, String token) {
         String verificationLink = frontendUrl + "/verify-email?token=" + token;
 
         SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom("noreply@lingua-hub.com");
+        message.setFrom(fromEmail);
         message.setTo(toEmail);
         message.setSubject("LinguaHub - Vérification de votre adresse email");
         message.setText(

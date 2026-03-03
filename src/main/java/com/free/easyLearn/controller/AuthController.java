@@ -6,12 +6,15 @@ import com.free.easyLearn.entity.AccessToken;
 import com.free.easyLearn.entity.User;
 import com.free.easyLearn.exception.BadRequestException;
 import com.free.easyLearn.repository.UserRepository;
+import com.free.easyLearn.security.CookieUtil;
 import com.free.easyLearn.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -29,6 +32,9 @@ public class AuthController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private CookieUtil cookieUtil;
 
     @PostMapping("/register")
     @Operation(
@@ -150,8 +156,18 @@ public class AuthController {
                     description = "Email ou mot de passe incorrect"
             )
     })
-    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request,
+                                                           HttpServletResponse httpResponse) {
         AuthResponse response = authService.login(request);
+
+        // Set tokens as HttpOnly cookies
+        cookieUtil.addAccessTokenCookie(httpResponse, response.getToken());
+        cookieUtil.addRefreshTokenCookie(httpResponse, response.getRefreshToken());
+
+        // Strip tokens from the JSON response body (security: tokens should only live in cookies)
+        response.setToken(null);
+        response.setRefreshToken(null);
+
         return ResponseEntity.ok(ApiResponse.success("Login successful", response));
     }
 
@@ -171,8 +187,28 @@ public class AuthController {
                     description = "Refresh token invalide ou expiré"
             )
     })
-    public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(@RequestBody RefreshTokenRequest request) {
-        AuthResponse response = authService.refreshToken(request.getRefreshToken());
+    public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(@RequestBody(required = false) RefreshTokenRequest request,
+                                                                  HttpServletRequest httpRequest,
+                                                                  HttpServletResponse httpResponse) {
+        // Try to get refresh token from HttpOnly cookie first, then from request body
+        String refreshToken = cookieUtil.getRefreshTokenFromCookies(httpRequest);
+        if (refreshToken == null && request != null && request.getRefreshToken() != null) {
+            refreshToken = request.getRefreshToken();
+        }
+        if (refreshToken == null) {
+            throw new BadRequestException("Refresh token is required");
+        }
+
+        AuthResponse response = authService.refreshToken(refreshToken);
+
+        // Set new tokens as HttpOnly cookies
+        cookieUtil.addAccessTokenCookie(httpResponse, response.getToken());
+        cookieUtil.addRefreshTokenCookie(httpResponse, response.getRefreshToken());
+
+        // Strip tokens from the JSON response body
+        response.setToken(null);
+        response.setRefreshToken(null);
+
         return ResponseEntity.ok(ApiResponse.success("Token refreshed", response));
     }
 
@@ -214,7 +250,7 @@ public class AuthController {
             summary = "Déconnexion utilisateur",
             description = "Invalide le refresh token de l'utilisateur"
     )
-    public ResponseEntity<ApiResponse<Void>> logout() {
+    public ResponseEntity<ApiResponse<Void>> logout(HttpServletResponse httpResponse) {
         // Get current authenticated user
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
@@ -222,6 +258,10 @@ public class AuthController {
                 .orElseThrow(() -> new BadRequestException("User not found"));
 
         authService.logout(user.getId());
+
+        // Clear HttpOnly cookies
+        cookieUtil.clearTokenCookies(httpResponse);
+
         return ResponseEntity.ok(ApiResponse.success("Logged out successfully", null));
     }
 
