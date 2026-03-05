@@ -5,7 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 @Data
@@ -16,7 +15,7 @@ public class ProfessorStatsDTO {
     private long totalStudents;
     private long upcomingSessions;
     private long completedSessions;
-    private BigDecimal rating;
+    private long totalSessions;
     private long totalEvaluations;
     private double averageEvaluationScore;
     private List<RoomSummaryDTO> liveRooms;

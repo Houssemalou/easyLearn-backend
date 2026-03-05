@@ -28,4 +28,5 @@ public class StudentDTO {
     private StudentSkillsDTO skills;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private LocalDateTime premiumExpiresAt;
 }

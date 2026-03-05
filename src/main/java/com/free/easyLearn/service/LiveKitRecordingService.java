@@ -2,9 +2,12 @@ package com.free.easyLearn.service;
 
 import com.free.easyLearn.entity.SessionRecording;
 import com.free.easyLearn.repository.SessionRecordingRepository;
-import io.livekit.server.EgressServiceClient;
-import io.livekit.server.RoomServiceClient;
+import io.livekit.server.*;
+import io.minio.GetPresignedObjectUrlArgs;
+import io.minio.MinioClient;
+import io.minio.http.Method;
 import livekit.LivekitEgress;
+import livekit.LivekitModels;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,9 +15,13 @@ import org.springframework.stereotype.Service;
 import retrofit2.Call;
 import retrofit2.Response;
 
+import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class LiveKitRecordingService {
@@ -24,9 +31,28 @@ public class LiveKitRecordingService {
     private final EgressServiceClient egressClient;
     private final RoomServiceClient roomServiceClient;
     private final SessionRecordingRepository sessionRecordingRepository;
+    private final MinioClient minioClient;
 
     // Track active egress per room: roomName -> egressId
     private final Map<String, String> activeEgressMap = new ConcurrentHashMap<>();
+
+    // Reverse map: egressId -> roomName (needed because WebEgress events have empty roomName)
+    private final Map<String, String> egressToRoomMap = new ConcurrentHashMap<>();
+
+    // LiveKit configuration
+    @Value("${livekit.api-key}")
+    private String apiKey;
+
+    @Value("${livekit.api-secret}")
+    private String apiSecret;
+
+    // Internal URL for egress Chrome to connect to LiveKit (inside Docker network)
+    @Value("${livekit.internal-url:ws://livekit:7880}")
+    private String livekitInternalUrl;
+
+    // URL of the recording page (frontend, reachable from egress container)
+    @Value("${livekit.recording-page-url:http://host.docker.internal:8080}")
+    private String recordingPageUrl;
 
     // S3/MinIO configuration
     @Value("${livekit.s3.access-key:minioadmin}")
@@ -46,15 +72,40 @@ public class LiveKitRecordingService {
 
     public LiveKitRecordingService(EgressServiceClient egressClient,
                                     RoomServiceClient roomServiceClient,
-                                    SessionRecordingRepository sessionRecordingRepository) {
+                                    SessionRecordingRepository sessionRecordingRepository,
+                                    MinioClient minioClient) {
         this.egressClient = egressClient;
         this.roomServiceClient = roomServiceClient;
         this.sessionRecordingRepository = sessionRecordingRepository;
+        this.minioClient = minioClient;
     }
 
     /**
-     * Start a RoomCompositeEgress recording for the given room.
-     * The recording is saved as MP4 to MinIO (S3-compatible).
+     * Generate a LiveKit access token for the egress recorder (hidden viewer).
+     */
+    private String generateRecorderToken(String roomName) {
+        AccessToken token = new AccessToken(apiKey, apiSecret);
+        token.setName("Recorder");
+        token.setIdentity("egress-recorder-" + roomName);
+        token.setTtl(14400); // 4 hours
+
+        // Subscribe-only — no publish, hidden
+        token.addGrants(
+                new RoomJoin(true),
+                new RoomName(roomName),
+                new CanPublish(false),
+                new CanSubscribe(true),
+                new CanPublishData(false),
+                new Hidden(true)
+        );
+
+        return token.toJwt();
+    }
+
+    /**
+     * Start a WebEgress recording for the given room.
+     * Opens ProfessorLiveRoom in recording mode (Chrome headless), which renders the full
+     * session UI (video grid, chat, whiteboard). The output is saved as MP4 to MinIO.
      */
     public String startRecording(String roomName) {
         try {
@@ -64,6 +115,17 @@ public class LiveKitRecordingService {
                 log.warn("Recording already active for room '{}', egressId: {}", roomName, existingId);
                 return existingId;
             }
+
+            // Generate a LiveKit token for the recorder
+            String recorderToken = generateRecorderToken(roomName);
+
+            // Build the recording URL: /professor/room/{roomName}/record?token=...&wsUrl=...
+            // In recording mode, ProfessorLiveRoom ignores the roomId param and uses token directly
+            String url = recordingPageUrl + "/professor/room/" + roomName + "/record"
+                    + "?token=" + URLEncoder.encode(recorderToken, StandardCharsets.UTF_8)
+                    + "&wsUrl=" + URLEncoder.encode(livekitInternalUrl, StandardCharsets.UTF_8);
+
+            log.info("Starting WebEgress for room '{}' -> {}", roomName, url);
 
             // Build S3 upload config pointing to MinIO
             LivekitEgress.S3Upload s3Upload = LivekitEgress.S3Upload.newBuilder()
@@ -78,22 +140,14 @@ public class LiveKitRecordingService {
             // Build file output with S3 destination
             LivekitEgress.EncodedFileOutput fileOutput = LivekitEgress.EncodedFileOutput.newBuilder()
                     .setFileType(LivekitEgress.EncodedFileType.MP4)
-                    .setFilepath(roomName + "/{room_name}-{time}.mp4")
+                    .setFilepath(roomName + "/{time}.mp4")
                     .setS3(s3Upload)
                     .build();
 
-            log.info("Starting RoomCompositeEgress for room '{}' -> s3://{}/{}", roomName, s3Bucket, roomName);
+            log.info("WebEgress URL: {}", url);
+            log.info("S3 config: endpoint={}, bucket={}, region={}, path={}/", s3Endpoint, s3Bucket, s3Region, roomName);
 
-            // Use the SDK high-level method
-            Call<LivekitEgress.EgressInfo> call = egressClient.startRoomCompositeEgress(
-                    roomName,
-                    fileOutput,
-                    "grid",  // layout
-                    null,    // optionsPreset
-                    null,    // optionsAdvanced
-                    false,   // audioOnly
-                    false    // videoOnly
-            );
+            Call<LivekitEgress.EgressInfo> call = egressClient.startWebEgress(url, fileOutput);
 
             Response<LivekitEgress.EgressInfo> response = call.execute();
 
@@ -101,17 +155,18 @@ public class LiveKitRecordingService {
                 LivekitEgress.EgressInfo egressInfo = response.body();
                 String egressId = egressInfo.getEgressId();
                 activeEgressMap.put(roomName, egressId);
-                log.info("Recording started for room '{}'. EgressId: {}, Status: {}",
+                egressToRoomMap.put(egressId, roomName);
+                log.info("WebEgress started for room '{}'. EgressId: {}, Status: {}",
                         roomName, egressId, egressInfo.getStatus());
                 return egressId;
             } else {
                 String errorBody = response.errorBody() != null ? response.errorBody().string() : "unknown";
-                log.error("Failed to start recording for room '{}'. HTTP {}: {}",
+                log.error("Failed to start WebEgress for room '{}'. HTTP {}: {}",
                         roomName, response.code(), errorBody);
                 return null;
             }
         } catch (Exception e) {
-            log.error("Exception starting recording for room '{}': {}", roomName, e.getMessage(), e);
+            log.error("Exception starting WebEgress for room '{}': {}", roomName, e.getMessage(), e);
             return null;
         }
     }
@@ -123,13 +178,14 @@ public class LiveKitRecordingService {
         try {
             String egressId = activeEgressMap.get(roomName);
 
+            // Always query LiveKit for active egress (in-memory map may be stale after restart)
             if (egressId == null) {
-                // Try to find active egress from LiveKit directly
                 egressId = findActiveEgressForRoom(roomName);
-                if (egressId == null) {
-                    log.warn("No active recording found for room '{}'. Nothing to stop.", roomName);
-                    return;
-                }
+            }
+
+            if (egressId == null) {
+                log.info("No active recording found for room '{}'. Nothing to stop.", roomName);
+                return;
             }
 
             log.info("Stopping recording for room '{}', egressId: {}", roomName, egressId);
@@ -143,7 +199,12 @@ public class LiveKitRecordingService {
                         roomName, egressInfo.getEgressId(), egressInfo.getStatus());
             } else {
                 String errorBody = response.errorBody() != null ? response.errorBody().string() : "unknown";
-                log.error("Failed to stop recording for room '{}'. HTTP {}: {}", roomName, response.code(), errorBody);
+                // Egress may already be stopping/completed — this is expected on room_finished
+                if (response.code() == 404 || (errorBody != null && errorBody.contains("not found"))) {
+                    log.info("Egress '{}' for room '{}' already stopped/completed.", egressId, roomName);
+                } else {
+                    log.warn("Failed to stop recording for room '{}'. HTTP {}: {}", roomName, response.code(), errorBody);
+                }
             }
 
             activeEgressMap.remove(roomName);
@@ -161,6 +222,12 @@ public class LiveKitRecordingService {
         String roomName = egressInfo.getRoomName();
         LivekitEgress.EgressStatus status = egressInfo.getStatus();
 
+        // WebEgress events have empty roomName — look up from our reverse map
+        if (roomName == null || roomName.isEmpty()) {
+            roomName = egressToRoomMap.get(egressId);
+            log.info("WebEgress event — resolved roomName '{}' from egressId '{}'", roomName, egressId);
+        }
+
         log.info("Egress event - Room: '{}', EgressId: {}, Status: {}", roomName, egressId, status);
 
         switch (status) {
@@ -173,17 +240,22 @@ public class LiveKitRecordingService {
                     }
                 }
                 activeEgressMap.remove(roomName);
+                egressToRoomMap.remove(egressId);
                 break;
 
             case EGRESS_FAILED:
                 log.error("Recording FAILED for room '{}'. EgressId: {}, Error: {}",
                         roomName, egressId, egressInfo.getError());
                 activeEgressMap.remove(roomName);
+                egressToRoomMap.remove(egressId);
                 break;
 
             case EGRESS_ACTIVE:
                 log.info("Recording ACTIVE for room '{}'. EgressId: {}", roomName, egressId);
-                activeEgressMap.put(roomName, egressId);
+                if (roomName != null && !roomName.isEmpty()) {
+                    activeEgressMap.put(roomName, egressId);
+                    egressToRoomMap.put(egressId, roomName);
+                }
                 break;
 
             case EGRESS_STARTING:
@@ -228,6 +300,15 @@ public class LiveKitRecordingService {
     }
 
     /**
+     * Clean up in-memory tracking for a room (called when room finishes).
+     * NOTE: Do NOT remove from egressToRoomMap here — it's needed when
+     * the egress_ended webhook fires (WebEgress events have empty roomName).
+     */
+    public void clearRoom(String roomName) {
+        activeEgressMap.remove(roomName);
+    }
+
+    /**
      * Save the recording URL to the database after egress completes.
      */
     private void saveRecordingUrl(String roomName, String recordingUrl) {
@@ -248,5 +329,95 @@ public class LiveKitRecordingService {
      */
     public List<SessionRecording> getRecordingsByRoomName(String roomName) {
         return sessionRecordingRepository.findByRoomName(roomName);
+    }
+
+    /**
+     * Generate a presigned GET URL for a recording stored in MinIO.
+     * The URL is valid for the given duration.
+     *
+     * @param recordingUrl the raw S3/MinIO URL stored in the DB
+     *                     (e.g. http://91.134.137.202:9000/livekit-recordings/room-xxx/file.mp4)
+     * @param durationMinutes how long the presigned link should be valid
+     * @return a presigned URL, or the original URL if generation fails
+     */
+    public String generatePresignedUrl(String recordingUrl, int durationMinutes) {
+        try {
+            // Extract the object key from the full URL
+            // URL format: http://host:port/bucket/object-key
+            URI uri = new URI(recordingUrl);
+            String path = uri.getPath(); // e.g. /livekit-recordings/room-xxx/file.mp4
+
+            // Remove leading slash and bucket name to get the object key
+            String bucketPrefix = "/" + s3Bucket + "/";
+            String objectKey;
+            if (path.startsWith(bucketPrefix)) {
+                objectKey = path.substring(bucketPrefix.length());
+            } else {
+                // Fallback: remove just the leading slash
+                objectKey = path.startsWith("/") ? path.substring(1) : path;
+            }
+
+            String presigned = minioClient.getPresignedObjectUrl(
+                    GetPresignedObjectUrlArgs.builder()
+                            .method(Method.GET)
+                            .bucket(s3Bucket)
+                            .object(objectKey)
+                            .expiry(durationMinutes, TimeUnit.MINUTES)
+                            .build()
+            );
+
+            log.info("Generated presigned URL for object '{}' (valid {} min)", objectKey, durationMinutes);
+            return presigned;
+        } catch (Exception e) {
+            log.error("Failed to generate presigned URL for '{}': {}", recordingUrl, e.getMessage(), e);
+            return recordingUrl; // fallback to original
+        }
+    }
+
+    /**
+     * Destroy the LiveKit room. This kicks all participants (including the recorder)
+     * and triggers the room_finished webhook from LiveKit.
+     */
+    public void destroyLiveKitRoom(String roomName) {
+        try {
+            log.info("Destroying LiveKit room '{}'", roomName);
+            Call<Void> call = roomServiceClient.deleteRoom(roomName);
+            Response<Void> response = call.execute();
+            if (response.isSuccessful()) {
+                log.info("LiveKit room '{}' destroyed successfully", roomName);
+            } else {
+                log.warn("Failed to destroy LiveKit room '{}': HTTP {}", roomName, response.code());
+            }
+        } catch (Exception e) {
+            log.error("Error destroying LiveKit room '{}': {}", roomName, e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Count real (non-recorder) participants in a LiveKit room.
+     * The egress recorder has identity starting with "egress-recorder-".
+     * Returns -1 on error.
+     */
+    public int countRealParticipants(String roomName) {
+        try {
+            Call<List<LivekitModels.ParticipantInfo>> call = roomServiceClient.listParticipants(roomName);
+            Response<List<LivekitModels.ParticipantInfo>> response = call.execute();
+
+            if (response.isSuccessful() && response.body() != null) {
+                long realCount = response.body().stream()
+                        .filter(p -> !p.getIdentity().startsWith("egress-recorder-"))
+                        .count();
+                log.info("Room '{}' has {} real participants (total: {})",
+                        roomName, realCount, response.body().size());
+                return (int) realCount;
+            } else {
+                log.warn("Failed to list participants for room '{}': HTTP {}",
+                        roomName, response.code());
+                return -1;
+            }
+        } catch (Exception e) {
+            log.error("Error listing participants for room '{}': {}", roomName, e.getMessage(), e);
+            return -1;
+        }
     }
 }

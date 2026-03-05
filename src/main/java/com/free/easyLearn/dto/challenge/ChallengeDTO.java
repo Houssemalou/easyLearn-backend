@@ -1,6 +1,7 @@
 package com.free.easyLearn.dto.challenge;
 
 import com.free.easyLearn.entity.Challenge;
+import com.free.easyLearn.entity.Student;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -26,6 +27,7 @@ public class ChallengeDTO {
     private Integer correctAnswer;
     private Integer basePoints;
     private String imageUrl;
+    private Student.LanguageLevel targetLevel;
     private LocalDateTime expiresAt;
     private Boolean isActive;
     private long participantCount;

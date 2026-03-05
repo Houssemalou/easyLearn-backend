@@ -56,6 +56,10 @@ public class Challenge {
     @Column(name = "image_url", columnDefinition = "TEXT")
     private String imageUrl;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "target_level")
+    private Student.LanguageLevel targetLevel;
+
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
 

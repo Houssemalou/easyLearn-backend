@@ -2,11 +2,13 @@ package com.free.easyLearn.service;
 
 import com.free.easyLearn.dto.auth.*;
 import com.free.easyLearn.entity.AccessToken;
+import com.free.easyLearn.entity.PremiumToken;
 import com.free.easyLearn.entity.Professor;
 import com.free.easyLearn.entity.Student;
 import com.free.easyLearn.entity.User;
 import com.free.easyLearn.exception.BadRequestException;
 import com.free.easyLearn.repository.AccessTokenRepository;
+import com.free.easyLearn.repository.PremiumTokenRepository;
 import com.free.easyLearn.repository.ProfessorRepository;
 import com.free.easyLearn.repository.StudentRepository;
 import com.free.easyLearn.repository.UserRepository;
@@ -49,6 +51,9 @@ public class AuthService {
 
     @Autowired
     private AccessTokenRepository accessTokenRepository;
+
+    @Autowired
+    private PremiumTokenRepository premiumTokenRepository;
 
     // Inject EmailService for verification emails
     @Autowired
@@ -333,6 +338,22 @@ public class AuthService {
             throw new BadRequestException("Veuillez vérifier votre adresse email avant de vous connecter. Consultez votre boîte de réception.");
         }
 
+        // Check if the user's access token has expired (1 year validity)
+        // If expired, deactivate user and block login
+        AccessToken userAccessToken = user.getAccessToken();
+        if (userAccessToken != null && userAccessToken.getExpiresAt() != null
+                && userAccessToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+            user.setIsActive(false);
+            userRepository.save(user);
+            log.warn("User {} access token expired. Account deactivated.", user.getId());
+            throw new BadRequestException("Votre token d'accès a expiré. Votre compte est désactivé. Veuillez contacter l'administrateur pour obtenir un nouveau token.");
+        }
+
+        // Check if user is active
+        if (!Boolean.TRUE.equals(user.getIsActive())) {
+            throw new BadRequestException("Votre compte est inactif. Veuillez contacter l'administrateur pour obtenir un nouveau token d'accès.");
+        }
+
         // Generate tokens
         String token = tokenProvider.generateToken(authentication);
         String refreshToken = tokenProvider.generateRefreshToken(request.getUsername());
@@ -406,11 +427,20 @@ public class AuthService {
                 .token(token)
                 .role(role)
                 .isUsed(false)
-                .expiresAt(LocalDateTime.now().plusDays(30)) // Tokens valid for 30 days
+                .expiresAt(LocalDateTime.now().plusYears(1)) // Tokens valid for 1 year
                 .createdBy(createdBy)
                 .build();
 
         return accessTokenRepository.save(accessToken);
+    }
+
+    @Transactional
+    public List<AccessToken> generateAccessTokens(AccessToken.UserRole role, int count, User createdBy) {
+        List<AccessToken> tokens = new java.util.ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            tokens.add(generateAccessToken(role, createdBy));
+        }
+        return tokens;
     }
 
     public List<AccessToken> getAvailableAccessTokens(AccessToken.UserRole role) {
@@ -476,5 +506,111 @@ public class AuthService {
         // TODO: Invalider les refresh tokens de l'utilisateur en base
         // Pour l'instant, le client doit simplement supprimer ses tokens localement
         log.info("User logged out: {}", userId);
+    }
+
+    // ===== Premium Token Management =====
+
+    @Transactional
+    public PremiumToken generatePremiumToken(User createdBy) {
+        String token;
+        do {
+            String randomPart = UUID.randomUUID().toString().toUpperCase().replace("-", "").substring(0, 12);
+            token = "PREMIUM_" + randomPart;
+        } while (premiumTokenRepository.existsByTokenAndIsUsedFalseAndExpiresAtAfter(token, LocalDateTime.now()));
+
+        PremiumToken premiumToken = PremiumToken.builder()
+                .token(token)
+                .isUsed(false)
+                .durationDays(30)
+                .expiresAt(LocalDateTime.now().plusYears(1)) // Token itself valid for 1 year (unused)
+                .createdBy(createdBy)
+                .build();
+
+        return premiumTokenRepository.save(premiumToken);
+    }
+
+    @Transactional
+    public List<PremiumToken> generatePremiumTokens(int count, User createdBy) {
+        List<PremiumToken> tokens = new java.util.ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            tokens.add(generatePremiumToken(createdBy));
+        }
+        return tokens;
+    }
+
+    public List<PremiumToken> getAvailablePremiumTokens() {
+        return premiumTokenRepository.findByIsUsedFalseAndExpiresAtAfter(LocalDateTime.now());
+    }
+
+    @Transactional
+    public LocalDateTime activatePremiumToken(String tokenStr, UUID studentUserId) {
+        PremiumToken premiumToken = premiumTokenRepository.findByToken(tokenStr.trim())
+                .orElseThrow(() -> new BadRequestException("Token premium invalide"));
+
+        if (premiumToken.getIsUsed() || premiumToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new BadRequestException("Token premium invalide ou expiré");
+        }
+
+        User user = userRepository.findById(studentUserId)
+                .orElseThrow(() -> new BadRequestException("Utilisateur non trouvé"));
+
+        if (user.getRole() != User.UserRole.STUDENT) {
+            throw new BadRequestException("Seuls les élèves peuvent activer un token premium");
+        }
+
+        Student student = studentRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new BadRequestException("Profil élève non trouvé"));
+
+        // Mark token as used
+        premiumToken.setIsUsed(true);
+        premiumToken.setUsedAt(LocalDateTime.now());
+        premiumToken.setUsedBy(user);
+        premiumTokenRepository.save(premiumToken);
+
+        // Set premium expiry on student (30 days from now)
+        LocalDateTime premiumExpiry = LocalDateTime.now().plusDays(premiumToken.getDurationDays());
+        student.setPremiumExpiresAt(premiumExpiry);
+        studentRepository.save(student);
+
+        log.info("Premium token activated for student {}. Expires at {}", student.getId(), premiumExpiry);
+        return premiumExpiry;
+    }
+
+    public boolean isStudentPremiumActive(UUID studentUserId) {
+        User user = userRepository.findById(studentUserId)
+                .orElseThrow(() -> new BadRequestException("Utilisateur non trouvé"));
+
+        Student student = studentRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new BadRequestException("Profil élève non trouvé"));
+
+        return student.getPremiumExpiresAt() != null
+                && student.getPremiumExpiresAt().isAfter(LocalDateTime.now());
+    }
+
+    // Reactivate a user with a new access token (admin operation)
+    @Transactional
+    public void reactivateUserWithToken(UUID userId, String newAccessTokenStr) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BadRequestException("Utilisateur non trouvé"));
+
+        AccessToken newToken = accessTokenRepository.findByToken(newAccessTokenStr.trim())
+                .orElseThrow(() -> new BadRequestException("Token d'accès invalide"));
+
+        if (newToken.getIsUsed() || newToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new BadRequestException("Token d'accès invalide ou expiré");
+        }
+
+        // Mark new token as used by this user
+        newToken.setIsUsed(true);
+        newToken.setUsedAt(LocalDateTime.now());
+        newToken.setUsedBy(user);
+        accessTokenRepository.save(newToken);
+
+        // Reactivate user
+        user.setIsActive(true);
+        user.setAccessToken(newToken);
+        userRepository.save(user);
+
+        log.info("User {} reactivated with new access token", userId);
     }
 }

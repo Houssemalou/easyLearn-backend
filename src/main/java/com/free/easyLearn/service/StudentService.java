@@ -35,6 +35,9 @@ public class StudentService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private com.free.easyLearn.repository.RoomRepository roomRepository;
+
     @Transactional
     public StudentDTO createStudent(CreateStudentRequest request) {
         // Check if user with email already exists
@@ -146,6 +149,16 @@ public class StudentService {
                     .build();
         }
 
+        // Compute totalSessions and hoursLearned dynamically from completed rooms
+        java.util.List<com.free.easyLearn.entity.Room> studentRooms = roomRepository.findAllByStudentId(student.getId());
+        int dynamicTotalSessions = (int) studentRooms.stream()
+                .filter(r -> r.getStatus() == com.free.easyLearn.entity.Room.RoomStatus.COMPLETED)
+                .count();
+        double dynamicHours = studentRooms.stream()
+                .filter(r -> r.getStatus() == com.free.easyLearn.entity.Room.RoomStatus.COMPLETED)
+                .mapToInt(r -> r.getDuration() != null ? r.getDuration() : 0)
+                .sum() / 60.0;
+
         return StudentDTO.builder()
                 .id(student.getId())
                 .name(student.getUser() != null ? student.getUser().getName() : null)
@@ -155,11 +168,12 @@ public class StudentService {
                 .bio(student.getBio())
                 .level(student.getLevel())
                 .joinedAt(student.getJoinedAt())
-                .totalSessions(student.getTotalSessions())
-                .hoursLearned(student.getHoursLearned())
+                .totalSessions(dynamicTotalSessions)
+                .hoursLearned(java.math.BigDecimal.valueOf(dynamicHours).setScale(1, java.math.RoundingMode.HALF_UP))
                 .skills(skillsDto)
                 .createdAt(student.getCreatedAt())
                 .updatedAt(student.getUpdatedAt())
+                .premiumExpiresAt(student.getPremiumExpiresAt())
                 .build();
     }
 }

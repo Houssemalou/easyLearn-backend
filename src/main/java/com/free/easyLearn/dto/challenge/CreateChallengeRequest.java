@@ -1,6 +1,7 @@
 package com.free.easyLearn.dto.challenge;
 
 import com.free.easyLearn.entity.Challenge;
+import com.free.easyLearn.entity.Student;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -43,6 +44,8 @@ public class CreateChallengeRequest {
     private Integer basePoints;
 
     private String imageUrl;
+
+    private Student.LanguageLevel targetLevel;
 
     @NotNull(message = "Expiration time is required")
     @Min(value = 1, message = "Expires in must be at least 1 hour")

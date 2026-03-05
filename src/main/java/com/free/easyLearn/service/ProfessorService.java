@@ -20,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import java.math.BigDecimal;
 import java.util.UUID;
 
 @Service
@@ -34,6 +33,15 @@ public class ProfessorService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private com.free.easyLearn.repository.RoomRepository roomRepository;
+
+    private int computeProfessorTotalSessions(UUID professorId) {
+        return (int) roomRepository.findAllByProfessorId(professorId).stream()
+                .filter(r -> r.getStatus() == com.free.easyLearn.entity.Room.RoomStatus.COMPLETED)
+                .count();
+    }
 
     @Transactional
     public ProfessorDTO createProfessor(CreateProfessorRequest request) {
@@ -58,7 +66,6 @@ public class ProfessorService {
                 .languages(request.getLanguages())
                 .specialization(request.getSpecialization())
                 .bio(request.getBio())
-                .rating(BigDecimal.ZERO)
                 .totalSessions(0);
 
         // If there's an authenticated admin creating this professor, set createdBy
@@ -145,8 +152,7 @@ public class ProfessorService {
                 .languages(professor.getLanguages())
                 .specialization(professor.getSpecialization())
                 .bio(professor.getBio())
-                .rating(professor.getRating())
-                .totalSessions(professor.getTotalSessions())
+                .totalSessions(computeProfessorTotalSessions(professor.getId()))
                 .joinedAt(professor.getCreatedAt())
                 .createdBy(professor.getCreatedBy() != null ? professor.getCreatedBy().getId() : null)
                 .build();

@@ -115,6 +115,13 @@ public class LiveKitController {
             @PathVariable String roomName
     ) {
         List<SessionRecording> recordings = recordingService.getRecordingsByRoomName(roomName);
+
+        // Replace raw MinIO URLs with time-limited presigned URLs (valid 60 min)
+        recordings.forEach(r -> {
+            String presigned = recordingService.generatePresignedUrl(r.getRecordingUrl(), 60);
+            r.setRecordingUrl(presigned);
+        });
+
         return ResponseEntity.ok(ApiResponse.success(recordings));
     }
 }

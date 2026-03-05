@@ -53,6 +53,7 @@ public class ChallengeService {
                 .correctAnswer(request.getCorrectAnswer())
                 .basePoints(request.getBasePoints())
                 .imageUrl(request.getImageUrl())
+                .targetLevel(request.getTargetLevel())
                 .expiresAt(LocalDateTime.now().plusHours(request.getExpiresIn()))
                 .isActive(true)
                 .build();
@@ -115,11 +116,83 @@ public class ChallengeService {
 
     // ========== Student Methods ==========
 
-    public List<ChallengeStudentDTO> getActiveChallenges() {
-        List<Challenge> challenges = challengeRepository.findActiveChallenges(LocalDateTime.now());
+    public List<ChallengeStudentDTO> getActiveChallenges(UUID studentUserId) {
+        Student student = studentRepository.findByUserId(studentUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
+
+        // Show active challenges matching the student's level, created by professors
+        // who share the same createdBy (admin) as this student
+        UUID createdById = student.getCreatedBy() != null ? student.getCreatedBy().getId() : null;
+
+        List<Challenge> challenges;
+        if (createdById != null) {
+            challenges = challengeRepository.findActiveChallengesByLevelAndCreatedBy(
+                    LocalDateTime.now(), student.getLevel(), createdById);
+        } else {
+            // Fallback: no createdBy — return empty
+            challenges = List.of();
+        }
+
         return challenges.stream()
                 .map(this::mapToStudentDTO)
                 .collect(Collectors.toList());
+    }
+
+    public StudentGameStatsDTO getStudentGameStats(UUID studentUserId) {
+        Student student = studentRepository.findByUserId(studentUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
+
+        long totalPoints = attemptRepository.sumPointsByStudentId(student.getId());
+        long challengesCompleted = attemptRepository.countCorrectByStudentId(student.getId());
+
+        // Count total active challenges for this student's level
+        UUID createdById = student.getCreatedBy() != null ? student.getCreatedBy().getId() : null;
+        long totalActiveChallenges = 0;
+        if (createdById != null) {
+            totalActiveChallenges = challengeRepository.findActiveChallengesByLevelAndCreatedBy(
+                    LocalDateTime.now(), student.getLevel(), createdById).size();
+        }
+
+        // Level: every 200 points = 1 level
+        int level = (int) (totalPoints / 200) + 1;
+        long pointsToNextLevel = 200 - (totalPoints % 200);
+
+        // Streak: consecutive days with a correct answer ending today or yesterday
+        int streak = calculateStreak(student.getId());
+
+        return StudentGameStatsDTO.builder()
+                .totalPoints(totalPoints)
+                .level(level)
+                .pointsToNextLevel(pointsToNextLevel)
+                .streak(streak)
+                .challengesCompleted(challengesCompleted)
+                .totalActiveChallenges(totalActiveChallenges)
+                .build();
+    }
+
+    private int calculateStreak(UUID studentId) {
+        List<java.sql.Date> dates = attemptRepository.findDistinctCorrectDatesByStudentId(studentId);
+        if (dates == null || dates.isEmpty()) return 0;
+
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.LocalDate lastDate = dates.get(0).toLocalDate();
+
+        // Streak must include today or yesterday
+        if (!lastDate.equals(today) && !lastDate.equals(today.minusDays(1))) {
+            return 0;
+        }
+
+        int streak = 1;
+        for (int i = 1; i < dates.size(); i++) {
+            java.time.LocalDate current = dates.get(i).toLocalDate();
+            java.time.LocalDate previous = dates.get(i - 1).toLocalDate();
+            if (previous.minusDays(1).equals(current)) {
+                streak++;
+            } else {
+                break;
+            }
+        }
+        return streak;
     }
 
     @Transactional
@@ -195,6 +268,18 @@ public class ChallengeService {
 
     public List<ChallengeLeaderboardEntryDTO> getLeaderboard() {
         List<Object[]> rows = attemptRepository.getLeaderboard();
+        return buildLeaderboardFromRows(rows);
+    }
+
+    public List<ChallengeLeaderboardEntryDTO> getLeaderboardByLevel(UUID studentUserId) {
+        Student student = studentRepository.findByUserId(studentUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
+
+        List<Object[]> rows = attemptRepository.getLeaderboardByLevel(student.getLevel());
+        return buildLeaderboardFromRows(rows);
+    }
+
+    private List<ChallengeLeaderboardEntryDTO> buildLeaderboardFromRows(List<Object[]> rows) {
         List<ChallengeLeaderboardEntryDTO> leaderboard = new ArrayList<>();
 
         int rank = 1;
@@ -212,7 +297,6 @@ public class ChallengeService {
 
         return leaderboard;
     }
-
     // ========== Private Helpers ==========
 
     private int calculatePoints(int basePoints, Challenge.ChallengeDifficulty difficulty, int attempt) {
@@ -251,6 +335,7 @@ public class ChallengeService {
                 .correctAnswer(challenge.getCorrectAnswer())
                 .basePoints(challenge.getBasePoints())
                 .imageUrl(challenge.getImageUrl())
+                .targetLevel(challenge.getTargetLevel())
                 .expiresAt(challenge.getExpiresAt())
                 .isActive(challenge.getIsActive())
                 .participantCount(participantCount)
@@ -271,6 +356,7 @@ public class ChallengeService {
                 .options(challenge.getOptions())
                 .basePoints(challenge.getBasePoints())
                 .imageUrl(challenge.getImageUrl())
+                .targetLevel(challenge.getTargetLevel())
                 .expiresAt(challenge.getExpiresAt())
                 .isActive(challenge.getIsActive())
                 .createdAt(challenge.getCreatedAt())

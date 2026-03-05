@@ -10,13 +10,13 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class LiveKitConfig {
 
-    @Value("${livekit.url:wss://easylearn-9lc2pn85.livekit.cloud}")
+    @Value("${livekit.url}")
     private String livekitUrl;
 
-    @Value("${livekit.api-key:APIEZCTfVKs3bGH}")
+    @Value("${livekit.api-key}")
     private String apiKey;
 
-    @Value("${livekit.api-secret:qzsYKTH3EkKjRflbDXjHpWxuQKsPLBXyuVfkgvKEkuD}")
+    @Value("${livekit.api-secret}")
     private String apiSecret;
 
     private String getHttpUrl() {

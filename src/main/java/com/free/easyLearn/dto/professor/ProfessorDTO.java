@@ -5,7 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -24,7 +23,6 @@ public class ProfessorDTO {
     private String specialization;
     private LocalDateTime joinedAt;
     private Integer totalSessions;
-    private BigDecimal rating;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private java.util.UUID createdBy;

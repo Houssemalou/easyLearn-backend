@@ -357,11 +357,11 @@ public class RoomService {
 
         // Check if any participants are still active in the room
         long activeCount = participantRepository.countByRoomIdAndJoinedAtIsNotNullAndLeftAtIsNull(roomId);
-        if (activeCount == 0 && room.getStatus() == Room.RoomStatus.LIVE) {
-            // If the professor is leaving AND no students remain, mark as COMPLETED
-            room.setStatus(Room.RoomStatus.COMPLETED);
-            roomRepository.save(room);
-        }
+//        if (activeCount == 0 && room.getStatus() == Room.RoomStatus.LIVE) {
+//            // If the professor is leaving AND no students remain, mark as COMPLETED
+//            room.setStatus(Room.RoomStatus.COMPLETED);
+//            roomRepository.save(room);
+//        }
     }
 
     public User getUserByEmail(String email) {

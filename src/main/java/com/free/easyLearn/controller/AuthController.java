@@ -3,6 +3,7 @@ package com.free.easyLearn.controller;
 import com.free.easyLearn.dto.auth.*;
 import com.free.easyLearn.dto.common.ApiResponse;
 import com.free.easyLearn.entity.AccessToken;
+import com.free.easyLearn.entity.PremiumToken;
 import com.free.easyLearn.entity.User;
 import com.free.easyLearn.exception.BadRequestException;
 import com.free.easyLearn.repository.UserRepository;
@@ -267,10 +268,10 @@ public class AuthController {
 
     @PostMapping("/generate-access-token")
     @Operation(
-            summary = "Générer un token d'accès",
-            description = "Génère un nouveau token d'accès pour l'inscription (réservé aux admins)"
+            summary = "Générer des tokens d'accès",
+            description = "Génère un ou plusieurs tokens d'accès pour l'inscription (réservé aux admins). Paramètre 'count' pour spécifier le nombre."
     )
-    public ResponseEntity<ApiResponse<GenerateAccessTokenResponse>> generateAccessToken(
+    public ResponseEntity<ApiResponse<java.util.List<GenerateAccessTokenResponse>>> generateAccessToken(
             @Valid @RequestBody GenerateAccessTokenRequest request
     ) {
         // Get current authenticated user
@@ -280,16 +281,20 @@ public class AuthController {
                 .orElseThrow(() -> new BadRequestException("User not found"));
 
         AccessToken.UserRole role = AccessToken.UserRole.valueOf(request.getRole().toUpperCase());
-        com.free.easyLearn.entity.AccessToken token = authService.generateAccessToken(role, user);
+        int count = request.getCount() != null ? request.getCount() : 1;
 
-        GenerateAccessTokenResponse response = GenerateAccessTokenResponse.builder()
-                .token(token.getToken())
-                .role(token.getRole().name())
-                .expiresAt(token.getExpiresAt())
-                .createdAt(token.getCreatedAt())
-                .build();
+        java.util.List<com.free.easyLearn.entity.AccessToken> tokens = authService.generateAccessTokens(role, count, user);
 
-        return ResponseEntity.ok(ApiResponse.success("Access token generated", response));
+        java.util.List<GenerateAccessTokenResponse> responses = tokens.stream()
+                .map(token -> GenerateAccessTokenResponse.builder()
+                        .token(token.getToken())
+                        .role(token.getRole().name())
+                        .expiresAt(token.getExpiresAt())
+                        .createdAt(token.getCreatedAt())
+                        .build())
+                .collect(java.util.stream.Collectors.toList());
+
+        return ResponseEntity.ok(ApiResponse.success(count + " access token(s) generated", responses));
     }
 
     @GetMapping("/access-tokens/{role}")
@@ -313,5 +318,113 @@ public class AuthController {
                 .collect(java.util.stream.Collectors.toList());
 
         return ResponseEntity.ok(ApiResponse.success("Available access tokens retrieved", responses));
+    }
+
+    // ===== Premium Token Endpoints =====
+
+    @PostMapping("/generate-premium-token")
+    @Operation(
+            summary = "Générer des tokens premium",
+            description = "Génère un ou plusieurs tokens premium pour l'accès au chatbot IA (réservé aux admins). Paramètre 'count' pour spécifier le nombre."
+    )
+    public ResponseEntity<ApiResponse<java.util.List<GenerateAccessTokenResponse>>> generatePremiumToken(
+            @RequestBody(required = false) java.util.Map<String, Object> request
+    ) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+        User user = userRepository.findByEmail(username)
+                .orElseThrow(() -> new BadRequestException("User not found"));
+
+        int count = 1;
+        if (request != null && request.containsKey("count")) {
+            count = Math.max(1, Math.min(100, ((Number) request.get("count")).intValue()));
+        }
+
+        java.util.List<PremiumToken> tokens = authService.generatePremiumTokens(count, user);
+
+        java.util.List<GenerateAccessTokenResponse> responses = tokens.stream()
+                .map(token -> GenerateAccessTokenResponse.builder()
+                        .token(token.getToken())
+                        .role("PREMIUM")
+                        .expiresAt(token.getExpiresAt())
+                        .createdAt(token.getCreatedAt())
+                        .build())
+                .collect(java.util.stream.Collectors.toList());
+
+        return ResponseEntity.ok(ApiResponse.success(count + " premium token(s) generated", responses));
+    }
+
+    @GetMapping("/premium-tokens")
+    @Operation(
+            summary = "Lister les tokens premium disponibles",
+            description = "Retourne la liste des tokens premium non utilisés"
+    )
+    public ResponseEntity<ApiResponse<java.util.List<GenerateAccessTokenResponse>>> getAvailablePremiumTokens() {
+        java.util.List<PremiumToken> tokens = authService.getAvailablePremiumTokens();
+
+        java.util.List<GenerateAccessTokenResponse> responses = tokens.stream()
+                .map(token -> GenerateAccessTokenResponse.builder()
+                        .token(token.getToken())
+                        .role("PREMIUM")
+                        .expiresAt(token.getExpiresAt())
+                        .createdAt(token.getCreatedAt())
+                        .build())
+                .collect(java.util.stream.Collectors.toList());
+
+        return ResponseEntity.ok(ApiResponse.success("Available premium tokens retrieved", responses));
+    }
+
+    @PostMapping("/activate-premium")
+    @Operation(
+            summary = "Activer un token premium",
+            description = "L'élève active un token premium pour accéder au chatbot IA pendant 30 jours"
+    )
+    public ResponseEntity<ApiResponse<java.util.Map<String, Object>>> activatePremiumToken(
+            @RequestBody java.util.Map<String, String> request
+    ) {
+        String tokenStr = request.get("token");
+        if (tokenStr == null || tokenStr.isBlank()) {
+            throw new BadRequestException("Token is required");
+        }
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+
+        // Resolve user: try email first, then uniqueCode
+        User user = userRepository.findByEmail(username).orElse(null);
+        if (user == null) {
+            com.free.easyLearn.entity.Student student = authService.findStudentByUniqueCode(username);
+            user = student.getUser();
+        }
+
+        java.time.LocalDateTime premiumExpiry = authService.activatePremiumToken(tokenStr, user.getId());
+
+        java.util.Map<String, Object> data = new java.util.HashMap<>();
+        data.put("premiumExpiresAt", premiumExpiry.toString());
+
+        return ResponseEntity.ok(ApiResponse.success("Premium activé avec succès pour 30 jours", data));
+    }
+
+    @GetMapping("/premium-status")
+    @Operation(
+            summary = "Vérifier le statut premium",
+            description = "Vérifie si l'élève a un abonnement premium actif"
+    )
+    public ResponseEntity<ApiResponse<java.util.Map<String, Object>>> getPremiumStatus() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+
+        User user = userRepository.findByEmail(username).orElse(null);
+        if (user == null) {
+            com.free.easyLearn.entity.Student student = authService.findStudentByUniqueCode(username);
+            user = student.getUser();
+        }
+
+        boolean isActive = authService.isStudentPremiumActive(user.getId());
+
+        java.util.Map<String, Object> data = new java.util.HashMap<>();
+        data.put("isPremium", isActive);
+
+        return ResponseEntity.ok(ApiResponse.success("Premium status retrieved", data));
     }
 }

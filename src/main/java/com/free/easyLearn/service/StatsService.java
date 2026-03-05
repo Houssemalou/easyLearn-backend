@@ -157,7 +157,7 @@ public class StatsService {
                 .totalStudents(myStudents.size())
                 .upcomingSessions(upcomingSessions)
                 .completedSessions(completedSessions)
-                .rating(professor.getRating())
+                .totalSessions(completedSessions)
                 .totalEvaluations(totalEvaluations)
                 .averageEvaluationScore(avgEvalScore != null ? avgEvalScore : 0.0)
                 .liveRooms(liveRoomDTOs)
@@ -233,10 +233,19 @@ public class StatsService {
                         .build())
                 .collect(Collectors.toList());
 
+        // Compute totalSessions and hoursLearned dynamically from completed rooms
+        long dynamicTotalSessions = allRooms.stream()
+                .filter(r -> r.getStatus() == Room.RoomStatus.COMPLETED)
+                .count();
+        double dynamicHoursLearned = allRooms.stream()
+                .filter(r -> r.getStatus() == Room.RoomStatus.COMPLETED)
+                .mapToInt(r -> r.getDuration() != null ? r.getDuration() : 0)
+                .sum() / 60.0;
+
         return StudentStatsDTO.builder()
                 .level(student.getLevel().name())
-                .hoursLearned(student.getHoursLearned())
-                .totalSessions(student.getTotalSessions())
+                .hoursLearned(java.math.BigDecimal.valueOf(dynamicHoursLearned).setScale(1, java.math.RoundingMode.HALF_UP))
+                .totalSessions((int) dynamicTotalSessions)
                 .upcomingSessions(upcomingSessions)
                 .completedSessions(completedSessions)
                 .overallProgress(overallProgress)

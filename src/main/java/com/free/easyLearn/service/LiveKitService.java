@@ -89,6 +89,8 @@ public class LiveKitService {
         token.setName(user.getName());
         token.setIdentity(identity);
         token.setTtl(tokenExpiration);
+        // Attach user role as metadata so clients can display the correct badge
+        token.setMetadata("{\"role\":\"" + user.getRole().name().toLowerCase() + "\"}");
 
         // Add video grants with proper permissions
         token.addGrants(

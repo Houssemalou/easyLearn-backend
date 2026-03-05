@@ -83,11 +83,21 @@ public class ChallengeController {
     // Student endpoints
     // ==========================================
 
+    @GetMapping("/my-game-stats")
+    @PreAuthorize("hasRole('STUDENT')")
+    @Operation(summary = "Stats de jeu de l'élève", description = "Points, niveau, série et défis complétés")
+    public ResponseEntity<ApiResponse<StudentGameStatsDTO>> getMyGameStats() {
+        User user = getCurrentUser();
+        StudentGameStatsDTO stats = challengeService.getStudentGameStats(user.getId());
+        return ResponseEntity.ok(ApiResponse.success("Stats récupérées", stats));
+    }
+
     @GetMapping("/active")
     @PreAuthorize("hasRole('STUDENT')")
-    @Operation(summary = "Défis actifs", description = "Récupérer tous les défis actifs et non expirés")
+    @Operation(summary = "Défis actifs", description = "Récupérer les défis actifs filtrés par niveau de l'élève et son professeur")
     public ResponseEntity<ApiResponse<List<ChallengeStudentDTO>>> getActiveChallenges() {
-        List<ChallengeStudentDTO> challenges = challengeService.getActiveChallenges();
+        User user = getCurrentUser();
+        List<ChallengeStudentDTO> challenges = challengeService.getActiveChallenges(user.getId());
         return ResponseEntity.ok(ApiResponse.success(challenges));
     }
 
@@ -119,6 +129,15 @@ public class ChallengeController {
     @Operation(summary = "Classement", description = "Classement global des étudiants sur les défis")
     public ResponseEntity<ApiResponse<List<ChallengeLeaderboardEntryDTO>>> getLeaderboard() {
         List<ChallengeLeaderboardEntryDTO> leaderboard = challengeService.getLeaderboard();
+        return ResponseEntity.ok(ApiResponse.success(leaderboard));
+    }
+
+    @GetMapping("/leaderboard/my-level")
+    @PreAuthorize("hasRole('STUDENT')")
+    @Operation(summary = "Classement par niveau", description = "Classement des étudiants du même niveau")
+    public ResponseEntity<ApiResponse<List<ChallengeLeaderboardEntryDTO>>> getLeaderboardByLevel() {
+        User user = getCurrentUser();
+        List<ChallengeLeaderboardEntryDTO> leaderboard = challengeService.getLeaderboardByLevel(user.getId());
         return ResponseEntity.ok(ApiResponse.success(leaderboard));
     }
 

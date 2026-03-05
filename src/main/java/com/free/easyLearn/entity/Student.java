@@ -53,6 +53,9 @@ public class Student {
     @Column(name = "unique_code", nullable = false, unique = true)
     private String uniqueCode;
 
+    @Column(name = "premium_expires_at")
+    private LocalDateTime premiumExpiresAt;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -80,6 +83,10 @@ public class Student {
         YEAR6,
         YEAR7,
         YEAR8,
-        YEAR9
+        YEAR9,
+        YEAR10,
+        YEAR11,
+        YEAR12,
+        YEAR13
     }
 }

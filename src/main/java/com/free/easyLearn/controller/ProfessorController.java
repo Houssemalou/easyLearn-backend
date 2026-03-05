@@ -96,7 +96,7 @@ public class ProfessorController {
             @PathVariable UUID createdById,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "rating") String sortBy,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortOrder
     ) {
         Page<ProfessorDTO> professors = professorService.getProfessorsByAdmin(createdById, page, size, sortBy, sortOrder);
@@ -117,7 +117,7 @@ public class ProfessorController {
     public ResponseEntity<ApiResponse<PageResponse<ProfessorDTO>>> getProfessors(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "rating") String sortBy,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortOrder
     ) {
         Page<ProfessorDTO> professors = professorService.getProfessors(page, size, sortBy, sortOrder);

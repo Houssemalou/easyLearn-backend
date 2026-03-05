@@ -7,7 +7,6 @@ import io.livekit.server.WebhookReceiver;
 import livekit.LivekitWebhook.WebhookEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -55,7 +54,7 @@ public class LiveKitWebhookController {
             switch (eventType) {
                 // ─── Room Events ───
                 case "room_started":
-                    log.info("Room started: '{}'", roomName);
+                    handleRoomStarted(roomName);
                     break;
 
                 case "room_finished":
@@ -64,13 +63,18 @@ public class LiveKitWebhookController {
 
                 // ─── Participant Events ───
                 case "participant_joined":
-                    handleParticipantJoined(event, roomName);
+                    log.info("Participant '{}' joined room '{}'",
+                            event.hasParticipant() ? event.getParticipant().getIdentity() : "?",
+                            roomName);
                     break;
 
                 case "participant_left":
-                    log.info("Participant '{}' left room '{}'",
-                            event.hasParticipant() ? event.getParticipant().getIdentity() : "?",
-                            roomName);
+                    String leftIdentity = event.hasParticipant() ? event.getParticipant().getIdentity() : "?";
+                    log.info("Participant '{}' left room '{}'", leftIdentity, roomName);
+                    // If a real user left (not the recorder), check if only recorder remains
+                    if (roomName != null && !leftIdentity.startsWith("egress-recorder-")) {
+                        handleParticipantLeft(roomName);
+                    }
                     break;
 
                 // ─── Egress Events ───
@@ -92,54 +96,83 @@ public class LiveKitWebhookController {
 
         } catch (Exception e) {
             log.error("Error processing LiveKit webhook: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error");
+            // Always return 200 to prevent LiveKit from retrying
+            return ResponseEntity.ok("Error processed");
         }
     }
 
     /**
-     * When a participant joins, auto-start recording if not already active.
+     * When room starts, auto-start recording.
+     * room_started fires ONCE when the LiveKit room is created (first participant connects).
      */
-    private void handleParticipantJoined(WebhookEvent event, String roomName) {
-        String identity = event.hasParticipant() ? event.getParticipant().getIdentity() : "unknown";
-        int numParticipants = event.hasRoom() ? event.getRoom().getNumParticipants() : 0;
+    private void handleRoomStarted(String roomName) {
+        log.info("Room started: '{}' — auto-starting recording", roomName);
 
-        log.info("Participant '{}' joined room '{}'. Total: {}", identity, roomName, numParticipants);
+        if (roomName == null) return;
 
-        // Auto-start recording when first participant joins
-        if (roomName != null && numParticipants >= 1 && !recordingService.isRecording(roomName)) {
-            log.info("Auto-starting recording for room '{}'", roomName);
+        try {
             String egressId = recordingService.startRecording(roomName);
             if (egressId != null) {
-                log.info("Recording auto-started for room '{}', egressId: {}", roomName, egressId);
+                log.info("Recording started for room '{}', egressId: {}", roomName, egressId);
             } else {
-                log.warn("Failed to auto-start recording for room '{}'", roomName);
+                log.warn("Failed to start recording for room '{}'", roomName);
             }
+        } catch (Exception e) {
+            log.error("Exception starting recording for room '{}': {}", roomName, e.getMessage(), e);
         }
     }
 
     /**
-     * When room finishes, stop recording and mark room as completed.
+     * When room finishes, explicitly stop WebEgress and mark room as COMPLETED.
+     * WebEgress does NOT auto-stop when the room closes (it's a standalone Chrome session).
+     * We must call stopRecording() which sends stopEgress() to LiveKit.
+     * LiveKit will then finalize the file, upload to S3, and fire egress_ended webhook.
      */
     private void handleRoomFinished(String roomName) {
         log.info("Room finished: '{}'", roomName);
 
-        // Stop active recording
-        if (roomName != null && recordingService.isRecording(roomName)) {
-            log.info("Stopping recording for finished room '{}'", roomName);
+        if (roomName == null) return;
+
+        // Explicitly stop the WebEgress recording
+        try {
             recordingService.stopRecording(roomName);
+        } catch (Exception e) {
+            log.error("Error stopping recording for room '{}': {}", roomName, e.getMessage(), e);
         }
 
-        // Mark room as COMPLETED in our system
-        if (roomName != null) {
-            try {
-                RoomDTO roomDto = roomService.getRoomByLivekitName(roomName);
-                if (roomDto != null) {
-                    roomService.endRoom(roomDto.getId());
-                    log.info("Marked room '{}' as COMPLETED via webhook", roomName);
-                }
-            } catch (Exception e) {
-                log.warn("Could not mark room '{}' as COMPLETED: {}", roomName, e.getMessage());
+        // Mark room as COMPLETED (tolerant if already completed)
+        try {
+            RoomDTO roomDto = roomService.getRoomByLivekitName(roomName);
+            if (roomDto != null) {
+                roomService.endRoom(roomDto.getId());
+                log.info("Marked room '{}' as COMPLETED via webhook", roomName);
             }
+        } catch (Exception e) {
+            // This is normal if room was already completed by leaveRoom or frontend
+            log.info("Room '{}' status update skipped (likely already completed): {}", roomName, e.getMessage());
+        }
+    }
+
+    /**
+     * When a real participant leaves, check if only the recorder remains.
+     * If so, stop the recording and destroy the LiveKit room.
+     * Destroying the room kicks the recorder, triggers room_finished webhook,
+     * which then marks the room as COMPLETED in the DB.
+     */
+    private void handleParticipantLeft(String roomName) {
+        try {
+            int realCount = recordingService.countRealParticipants(roomName);
+            if (realCount == 0) {
+                log.info("No real participants left in room '{}'. Stopping recording and destroying LiveKit room.", roomName);
+
+                // 1) Stop the WebEgress recording first (finalize MP4, upload to MinIO)
+                recordingService.stopRecording(roomName);
+
+                // 2) Destroy the LiveKit room — this kicks the recorder and triggers room_finished
+                recordingService.destroyLiveKitRoom(roomName);
+            }
+        } catch (Exception e) {
+            log.error("Error handling participant_left for room '{}': {}", roomName, e.getMessage(), e);
         }
     }
 }
