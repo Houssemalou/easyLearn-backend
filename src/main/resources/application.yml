@@ -2,7 +2,7 @@ spring:
   application:
     name: lingua-hub-backend
   profiles:
-    active: ${SPRING_PROFILES_ACTIVE:dev}
+    active: ${SPRING_PROFILES_ACTIVE:prod}
 
   datasource:
     url: jdbc:postgresql://postgres:5432/lingua_hub
@@ -46,7 +46,7 @@ server:
   port: 8081
 
 app:
-  frontend-url: ${FRONTEND_URL:http://localhost:8080}
+  frontend-url: ${FRONTEND_URL:http://91.134.137.202:80}
 
 
 
@@ -60,16 +60,16 @@ jwt:
 livekit:
   api-key: ${LIVEKIT_API_KEY:xcsdzhezhetejszfztsqhz}
   api-secret: ${LIVEKIT_API_SECRET:hsgdrevsgsfzuaihdsgzfzzjossauzsbdef}
-  url: ${LIVEKIT_URL:ws://localhost:7880}
+  url: ${LIVEKIT_URL:ws://91.134.137.202:7880}
   # Internal URL that Chrome in the egress container uses to connect to LiveKit
   internal-url: ${LIVEKIT_INTERNAL_URL:ws://livekit:7880}
   # URL the egress Chrome uses to load the recording page
-  recording-page-url: ${LIVEKIT_RECORDING_PAGE_URL:http://host.docker.internal:8080}
+  recording-page-url: ${LIVEKIT_RECORDING_PAGE_URL:http://host.docker.internal:80}
   token-expiration: 14400 # 4 hours in seconds
   s3:
     access-key: ${LIVEKIT_S3_ACCESS_KEY:minioadmin}
     secret-key: ${LIVEKIT_S3_SECRET_KEY:minioadmin}
-    endpoint: ${LIVEKIT_S3_ENDPOINT:http://91.134.137.202:9000}
+    endpoint: ${LIVEKIT_S3_ENDPOINT:http://minio:9000}
     bucket: ${LIVEKIT_S3_BUCKET:livekit-recordings}
     region: ${LIVEKIT_S3_REGION:us-east-1}
 
