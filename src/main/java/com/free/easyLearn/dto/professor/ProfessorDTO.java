@@ -21,6 +21,7 @@ public class ProfessorDTO {
     private String bio;
     private List<String> languages;
     private String specialization;
+    private String professorType;
     private LocalDateTime joinedAt;
     private Integer totalSessions;
     private LocalDateTime createdAt;

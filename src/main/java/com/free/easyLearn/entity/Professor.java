@@ -30,11 +30,23 @@ public class Professor {
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
     
+    @Enumerated(EnumType.STRING)
+    @Column(name = "professor_type", length = 30)
+    private ProfessorType professorType;
+
     @Column(columnDefinition = "TEXT")
     private String bio;
     
     @Column
     private String specialization;
+
+    public enum ProfessorType {
+        PROF_PRIMAIRE,
+        PROF_BASE,
+        PROF_SECONDAIRE,
+        FORMATEUR,
+        PROF_PREPA
+    }
     
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "professor_languages", joinColumns = @JoinColumn(name = "professor_id"))

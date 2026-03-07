@@ -5,12 +5,14 @@ import com.free.easyLearn.repository.SessionRecordingRepository;
 import io.livekit.server.*;
 import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MinioClient;
+import io.minio.RemoveObjectArgs;
 import io.minio.http.Method;
 import livekit.LivekitEgress;
 import livekit.LivekitModels;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import retrofit2.Call;
 import retrofit2.Response;
@@ -18,6 +20,7 @@ import retrofit2.Response;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,6 +30,8 @@ import java.util.concurrent.TimeUnit;
 public class LiveKitRecordingService {
 
     private static final Logger log = LoggerFactory.getLogger(LiveKitRecordingService.class);
+
+    private static final int RECORDING_RETENTION_DAYS = 3;
 
     private final EgressServiceClient egressClient;
     private final RoomServiceClient roomServiceClient;
@@ -418,6 +423,98 @@ public class LiveKitRecordingService {
         } catch (Exception e) {
             log.error("Error listing participants for room '{}': {}", roomName, e.getMessage(), e);
             return -1;
+        }
+    }
+
+    /**
+     * Scheduled task: delete expired recordings (older than 3 days) from MinIO and the database.
+     * Runs every hour.
+     */
+    @Scheduled(fixedRate = 3600000) // every hour
+    public void deleteExpiredRecordings() {
+        LocalDateTime expirationThreshold = LocalDateTime.now().minusDays(RECORDING_RETENTION_DAYS);
+        List<SessionRecording> expired = sessionRecordingRepository.findByCreatedAtBefore(expirationThreshold);
+
+        if (expired.isEmpty()) {
+            log.debug("No expired recordings to clean up.");
+            return;
+        }
+
+        log.info("Found {} expired recordings to delete (older than {} days).", expired.size(), RECORDING_RETENTION_DAYS);
+
+        for (SessionRecording recording : expired) {
+            // 1) Delete from MinIO
+            try {
+                String objectKey = extractObjectKey(recording.getRecordingUrl());
+                if (objectKey != null) {
+                    minioClient.removeObject(
+                            RemoveObjectArgs.builder()
+                                    .bucket(s3Bucket)
+                                    .object(objectKey)
+                                    .build()
+                    );
+                    log.info("Deleted MinIO object '{}' for expired recording id={}", objectKey, recording.getId());
+                }
+            } catch (Exception e) {
+                log.error("Failed to delete MinIO object for recording id={}: {}", recording.getId(), e.getMessage(), e);
+            }
+
+            // 2) Delete from database
+            try {
+                sessionRecordingRepository.delete(recording);
+                log.info("Deleted expired recording id={} for room '{}'", recording.getId(), recording.getRoomName());
+            } catch (Exception e) {
+                log.error("Failed to delete recording id={} from database: {}", recording.getId(), e.getMessage(), e);
+            }
+        }
+    }
+
+    /**
+     * Extract the MinIO object key from the full recording URL.
+     */
+    private String extractObjectKey(String recordingUrl) {
+        try {
+            URI uri = new URI(recordingUrl);
+            String path = uri.getPath();
+            String bucketPrefix = "/" + s3Bucket + "/";
+            if (path.startsWith(bucketPrefix)) {
+                return path.substring(bucketPrefix.length());
+            }
+            return path.startsWith("/") ? path.substring(1) : path;
+        } catch (Exception e) {
+            log.error("Failed to extract object key from URL '{}': {}", recordingUrl, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Generate a presigned download URL for a recording (Content-Disposition: attachment).
+     */
+    public String generatePresignedDownloadUrl(String recordingUrl, int durationMinutes) {
+        try {
+            String objectKey = extractObjectKey(recordingUrl);
+            if (objectKey == null) return recordingUrl;
+
+            // Extract filename from the object key
+            String filename = objectKey.contains("/") ? objectKey.substring(objectKey.lastIndexOf('/') + 1) : objectKey;
+
+            String presigned = minioClient.getPresignedObjectUrl(
+                    GetPresignedObjectUrlArgs.builder()
+                            .method(Method.GET)
+                            .bucket(s3Bucket)
+                            .object(objectKey)
+                            .expiry(durationMinutes, TimeUnit.MINUTES)
+                            .extraQueryParams(Map.of(
+                                    "response-content-disposition", "attachment; filename=\"" + filename + "\""
+                            ))
+                            .build()
+            );
+
+            log.info("Generated presigned download URL for object '{}' (valid {} min)", objectKey, durationMinutes);
+            return presigned;
+        } catch (Exception e) {
+            log.error("Failed to generate presigned download URL for '{}': {}", recordingUrl, e.getMessage(), e);
+            return recordingUrl;
         }
     }
 }

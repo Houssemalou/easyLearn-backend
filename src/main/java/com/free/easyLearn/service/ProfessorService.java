@@ -151,6 +151,7 @@ public class ProfessorService {
                 .avatar(professor.getUser() != null ? professor.getUser().getAvatar() : null)
                 .languages(professor.getLanguages())
                 .specialization(professor.getSpecialization())
+                .professorType(professor.getProfessorType() != null ? professor.getProfessorType().name() : null)
                 .bio(professor.getBio())
                 .totalSessions(computeProfessorTotalSessions(professor.getId()))
                 .joinedAt(professor.getCreatedAt())

@@ -4,6 +4,7 @@ import com.free.easyLearn.entity.SessionRecording;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -13,4 +14,9 @@ public interface SessionRecordingRepository extends JpaRepository<SessionRecordi
      * Find all recordings for a room by its LiveKit room name.
      */
     List<SessionRecording> findByRoomName(String roomName);
+
+    /**
+     * Find all recordings created before the given date (for cleanup of expired recordings).
+     */
+    List<SessionRecording> findByCreatedAtBefore(LocalDateTime dateTime);
 }

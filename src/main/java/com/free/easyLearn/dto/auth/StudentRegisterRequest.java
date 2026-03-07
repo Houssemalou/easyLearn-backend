@@ -33,6 +33,8 @@ public class StudentRegisterRequest {
     @NotNull(message = "Level is required")
     private String level; // A1, A2, B1, B2
 
+    private String studentType; // SCOLAIRE, FORMATION, PREPA
+
     @NotBlank(message = "Access token is required")
     private String accessToken;
 }

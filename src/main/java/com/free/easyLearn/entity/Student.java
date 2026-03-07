@@ -50,6 +50,11 @@ public class Student {
     @OneToOne(mappedBy = "student", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private StudentSkills skills;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "student_type", length = 20)
+    @Builder.Default
+    private StudentType studentType = StudentType.SCOLAIRE;
+
     @Column(name = "unique_code", nullable = false, unique = true)
     private String uniqueCode;
 
@@ -87,6 +92,14 @@ public class Student {
         YEAR10,
         YEAR11,
         YEAR12,
-        YEAR13
+        YEAR13,
+        PREPA1,
+        PREPA2
+    }
+
+    public enum StudentType {
+        SCOLAIRE,
+        FORMATION,
+        PREPA
     }
 }

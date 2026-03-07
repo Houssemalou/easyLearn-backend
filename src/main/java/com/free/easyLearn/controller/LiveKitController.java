@@ -19,9 +19,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/livekit")
@@ -116,6 +118,12 @@ public class LiveKitController {
     ) {
         List<SessionRecording> recordings = recordingService.getRecordingsByRoomName(roomName);
 
+        // Filter out expired recordings (older than 3 days)
+        LocalDateTime expirationThreshold = LocalDateTime.now().minusDays(3);
+        recordings = recordings.stream()
+                .filter(r -> r.getCreatedAt() == null || r.getCreatedAt().isAfter(expirationThreshold))
+                .collect(Collectors.toList());
+
         // Replace raw MinIO URLs with time-limited presigned URLs (valid 60 min)
         recordings.forEach(r -> {
             String presigned = recordingService.generatePresignedUrl(r.getRecordingUrl(), 60);
@@ -123,6 +131,34 @@ public class LiveKitController {
         });
 
         return ResponseEntity.ok(ApiResponse.success(recordings));
+    }
+
+    @GetMapping("/recordings/{roomName}/download/{recordingId}")
+    @Operation(
+            summary = "Télécharger un enregistrement",
+            description = "Génère une URL de téléchargement pour un enregistrement spécifique (valide 60 min)."
+    )
+    public ResponseEntity<?> downloadRecording(
+            @PathVariable String roomName,
+            @PathVariable Long recordingId
+    ) {
+        List<SessionRecording> recordings = recordingService.getRecordingsByRoomName(roomName);
+        SessionRecording target = recordings.stream()
+                .filter(r -> r.getId().equals(recordingId))
+                .findFirst()
+                .orElse(null);
+
+        if (target == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        // Check if expired
+        if (target.getCreatedAt() != null && target.getCreatedAt().plusDays(3).isBefore(LocalDateTime.now())) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Recording has expired and is no longer available."));
+        }
+
+        String downloadUrl = recordingService.generatePresignedDownloadUrl(target.getRecordingUrl(), 60);
+        return ResponseEntity.ok(ApiResponse.success(Map.of("downloadUrl", downloadUrl)));
     }
 }
 

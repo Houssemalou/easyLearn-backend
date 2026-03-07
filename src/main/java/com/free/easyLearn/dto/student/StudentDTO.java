@@ -22,6 +22,7 @@ public class StudentDTO {
     private String nickname;
     private String bio;
     private Student.LanguageLevel level;
+    private String studentType;
     private LocalDateTime joinedAt;
     private Integer totalSessions;
     private BigDecimal hoursLearned;

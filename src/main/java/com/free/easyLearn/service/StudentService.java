@@ -167,6 +167,7 @@ public class StudentService {
                 .nickname(student.getNickname())
                 .bio(student.getBio())
                 .level(student.getLevel())
+                .studentType(student.getStudentType() != null ? student.getStudentType().name() : null)
                 .joinedAt(student.getJoinedAt())
                 .totalSessions(dynamicTotalSessions)
                 .hoursLearned(java.math.BigDecimal.valueOf(dynamicHours).setScale(1, java.math.RoundingMode.HALF_UP))

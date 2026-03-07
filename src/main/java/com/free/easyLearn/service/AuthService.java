@@ -101,6 +101,7 @@ public class AuthService {
                 .nickname(request.getNickname())
                 .bio(request.getBio())
                 .level(Student.LanguageLevel.valueOf(request.getLevel().toUpperCase()))
+                .studentType(request.getStudentType() != null ? Student.StudentType.valueOf(request.getStudentType().toUpperCase()) : Student.StudentType.SCOLAIRE)
                 .uniqueCode(request.getUniqueCode())
                 .joinedAt(LocalDateTime.now())
                 .createdBy(accessToken.getCreatedBy())
@@ -174,6 +175,7 @@ public class AuthService {
                 .bio(request.getBio())
                 .languages(request.getLanguages())
                 .specialization(request.getSpecialization())
+                .professorType(Professor.ProfessorType.valueOf(request.getProfessorType().toUpperCase()))
                 .joinedAt(LocalDateTime.now())
                 .createdBy(accessToken.getCreatedBy())
                 .build();

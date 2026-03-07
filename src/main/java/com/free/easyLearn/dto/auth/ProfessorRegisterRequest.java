@@ -35,6 +35,9 @@ public class ProfessorRegisterRequest {
     @Size(max = 255, message = "Specialization must not exceed 255 characters")
     private String specialization;
 
+    @NotBlank(message = "Professor type is required")
+    private String professorType;
+
     @NotBlank(message = "Access token is required")
     private String accessToken;
 }

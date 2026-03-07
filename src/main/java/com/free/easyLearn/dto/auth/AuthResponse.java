@@ -25,6 +25,8 @@ public class AuthResponse {
     private String avatar;
     private List<String> languages;
     private String specialization;
+    private String professorType;
+    private String studentType;
     private LocalDateTime joinedAt;
     private Long expiresIn; // milliseconds
 }
