@@ -24,7 +24,7 @@ server:
 
 
 cors:
-  allowed-origins: ${CORS_ORIGINS:http://localhost:8080,http://91.134.137.202:80,https://91.134.137.202:443, http://learnup.tn, https://learnup.tn, http://learnup.tn:80, https://learnup.tn:443}
+  allowed-origins: ${CORS_ORIGINS:http://localhost:8080,http://91.134.137.202:80,https://91.134.137.202:443,http://learnup.tn,https://learnup.tn,http://www.learnup.tn,https:www.//learnup.tn:443}
   allowed-methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
   allowed-headers: "*"
   allow-credentials: true
