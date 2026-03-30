@@ -114,25 +114,11 @@ public class LiveKitRecordingService {
      */
     public String startRecording(String roomName) {
         try {
-            // Check if already recording
             if (activeEgressMap.containsKey(roomName)) {
-                String existingId = activeEgressMap.get(roomName);
-                log.warn("Recording already active for room '{}', egressId: {}", roomName, existingId);
-                return existingId;
+                return activeEgressMap.get(roomName);
             }
 
-            // Generate a LiveKit token for the recorder
-            String recorderToken = generateRecorderToken(roomName);
-
-            // Build the recording URL: /professor/room/{roomName}/record?token=...&wsUrl=...
-            // In recording mode, ProfessorLiveRoom ignores the roomId param and uses token directly
-            String url = recordingPageUrl + "/professor/room/" + roomName + "/record"
-                    + "?token=" + URLEncoder.encode(recorderToken, StandardCharsets.UTF_8)
-                    + "&wsUrl=" + URLEncoder.encode(livekitInternalUrl, StandardCharsets.UTF_8);
-
-            log.info("Starting WebEgress for room '{}' -> {}", roomName, url);
-
-            // Build S3 upload config pointing to MinIO
+            // S3 / MinIO
             LivekitEgress.S3Upload s3Upload = LivekitEgress.S3Upload.newBuilder()
                     .setAccessKey(s3AccessKey)
                     .setSecret(s3SecretKey)
@@ -142,38 +128,43 @@ public class LiveKitRecordingService {
                     .setForcePathStyle(true)
                     .build();
 
-            // Build file output with S3 destination
-            LivekitEgress.EncodedFileOutput fileOutput = LivekitEgress.EncodedFileOutput.newBuilder()
-                    .setFileType(LivekitEgress.EncodedFileType.MP4)
-                    .setFilepath(roomName + "/{time}.mp4")
-                    .setS3(s3Upload)
-                    .build();
+            LivekitEgress.EncodedFileOutput fileOutput =
+                    LivekitEgress.EncodedFileOutput.newBuilder()
+                            .setFileType(LivekitEgress.EncodedFileType.MP4)
+                            .setFilepath(roomName + "/{time}.mp4")
+                            .setS3(s3Upload)
+                            .build();
 
-            log.info("WebEgress URL: {}", url);
-            log.info("S3 config: endpoint={}, bucket={}, region={}, path={}/", s3Endpoint, s3Bucket, s3Region, roomName);
-
-            Call<LivekitEgress.EgressInfo> call = egressClient.startWebEgress(url, fileOutput);
+            // IMPORTANT: ordre des paramètres
+            Call<LivekitEgress.EgressInfo> call =
+                    egressClient.startRoomCompositeEgress(
+                            roomName,
+                            fileOutput,
+                            "screen-share", // layout
+                            LivekitEgress.EncodingOptionsPreset.H264_720P_30,
+                            null,
+                            false,
+                            false,
+                            ""
+                    );
 
             Response<LivekitEgress.EgressInfo> response = call.execute();
 
             if (response.isSuccessful() && response.body() != null) {
-                LivekitEgress.EgressInfo egressInfo = response.body();
-                String egressId = egressInfo.getEgressId();
+                String egressId = response.body().getEgressId();
                 activeEgressMap.put(roomName, egressId);
                 egressToRoomMap.put(egressId, roomName);
-                log.info("WebEgress started for room '{}'. EgressId: {}, Status: {}",
-                        roomName, egressId, egressInfo.getStatus());
+                log.info("RoomComposite recording started for room {}", roomName);
                 return egressId;
             } else {
-                String errorBody = response.errorBody() != null ? response.errorBody().string() : "unknown";
-                log.error("Failed to start WebEgress for room '{}'. HTTP {}: {}",
-                        roomName, response.code(), errorBody);
-                return null;
+                log.error("Failed to start RoomComposite Egress");
             }
+
         } catch (Exception e) {
-            log.error("Exception starting WebEgress for room '{}': {}", roomName, e.getMessage(), e);
-            return null;
+            log.error("Error starting RoomComposite recording", e);
         }
+
+        return null;
     }
 
     /**
