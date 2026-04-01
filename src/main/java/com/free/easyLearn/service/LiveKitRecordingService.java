@@ -66,7 +66,7 @@ public class LiveKitRecordingService {
     @Value("${livekit.s3.secret-key:minioadmin}")
     private String s3SecretKey;
 
-    @Value("${livekit.s3.endpoint:http://91.134.137.202:9000}")
+    @Value("${livekit.s3.endpoint:https://learnup.tn:9000}")
     private String s3Endpoint;
 
     @Value("${livekit.s3.bucket:livekit-recordings}")
