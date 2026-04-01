@@ -60,7 +60,7 @@ jwt:
 livekit:
   api-key: ${LIVEKIT_API_KEY:xcsdzhezhetejszfztsqhz}
   api-secret: ${LIVEKIT_API_SECRET:hsgdrevsgsfzuaihdsgzfzzjossauzsbdef}
-  url: ${LIVEKIT_URL:wss://learnup.tn:7880}
+  url: ${LIVEKIT_URL:ws://livekit:7880}
   # Internal URL that Chrome in the egress container uses to connect to LiveKit
   internal-url: ${LIVEKIT_INTERNAL_URL:ws://livekit:7880}
   # URL the egress Chrome uses to load the recording page
