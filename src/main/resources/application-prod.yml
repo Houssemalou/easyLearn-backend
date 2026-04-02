@@ -50,7 +50,7 @@ logging:
 livekit:
   api-key: ${LIVEKIT_API_KEY:xcsdzhezhetejszfztsqhz}
   api-secret: ${LIVEKIT_API_SECRET:hsgdrevsgsfzuaihdsgzfzzjossauzsbdef}
-  url: ${LIVEKIT_URL:ws://livekit:7880}
+  url: ${LIVEKIT_URL:wss://livekit.learnup.tn}
   token-expiration: 14400
 
 
