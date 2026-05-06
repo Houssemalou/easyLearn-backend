@@ -1,12 +1,19 @@
 package com.free.easyLearn.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.free.easyLearn.entity.Course;
 import com.free.easyLearn.config.LiveKitConfig;
 import com.free.easyLearn.dto.livekit.LiveKitTokenResponse;
 import com.free.easyLearn.entity.LiveKitToken;
 import com.free.easyLearn.entity.Room;
+import com.free.easyLearn.entity.Student;
 import com.free.easyLearn.entity.User;
+import com.free.easyLearn.entity.CourseMaterial;
 import com.free.easyLearn.exception.ResourceNotFoundException;
+import com.free.easyLearn.repository.CourseRepository;
 import com.free.easyLearn.repository.LiveKitTokenRepository;
+import com.free.easyLearn.repository.StudentRepository;
 import com.free.easyLearn.repository.RoomRepository;
 import com.free.easyLearn.repository.UserRepository;
 import io.livekit.server.*;
@@ -18,6 +25,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -38,6 +49,15 @@ public class LiveKitService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private StudentRepository studentRepository;
+
+    @Autowired
+    private CourseRepository courseRepository;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
     @Value("${livekit.token-expiration}")
     private long tokenExpiration;
 
@@ -46,7 +66,7 @@ public class LiveKitService {
      * If the room is SCHEDULED, the first token generation sets it to LIVE
      */
     @Transactional
-    public LiveKitTokenResponse generateToken(UUID roomId, UUID userId) {
+    public LiveKitTokenResponse generateToken(UUID roomId, UUID userId, UUID courseId) {
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new ResourceNotFoundException("Room not found"));
 
@@ -90,7 +110,7 @@ public class LiveKitService {
         token.setIdentity(identity);
         token.setTtl(tokenExpiration);
         // Attach user role as metadata so clients can display the correct badge
-        token.setMetadata("{\"role\":\"" + user.getRole().name().toLowerCase() + "\"}");
+        token.setMetadata(buildParticipantMetadata(user, courseId));
 
         // Add video grants with proper permissions
         token.addGrants(
@@ -123,6 +143,45 @@ public class LiveKitService {
                 .serverUrl(livekitConfig.getLivekitUrl())
                 .expiresAt(expiresAt)
                 .build();
+    }
+
+    private String buildParticipantMetadata(User user, UUID courseId) {
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("role", user.getRole().name().toLowerCase());
+        metadata.put("username", user.getName());
+        metadata.put("userIdentity", user.getId().toString());
+
+        Student student = studentRepository.findByUserId(user.getId()).orElse(null);
+        metadata.put("level", student != null ? student.getLevel().name() : "beginner");
+
+        if (courseId != null) {
+            Course course = courseRepository.findById(courseId).orElse(null);
+            if (course != null) {
+                metadata.put("courseId", course.getId().toString());
+                metadata.put("courseName", course.getName());
+                metadata.put("courseLevel", course.getLevel().name());
+
+                List<String> keys = course.getMaterials() == null
+                        ? List.of()
+                        : course.getMaterials().stream()
+                        .sorted(Comparator.comparingInt(CourseMaterial::getPositionIndex))
+                        .map(CourseMaterial::getObjectKey)
+                        .toList();
+
+                if (keys.isEmpty() && course.getObjectKey() != null && !course.getObjectKey().isBlank()) {
+                    keys = List.of(course.getObjectKey());
+                }
+
+                metadata.put("courseObjectKeys", keys);
+                metadata.put("courseObjectKey", keys.isEmpty() ? null : keys.get(0));
+            }
+        }
+
+        try {
+            return objectMapper.writeValueAsString(metadata);
+        } catch (JsonProcessingException e) {
+            return "{\"role\":\"" + user.getRole().name().toLowerCase() + "\"}";
+        }
     }
 
     /**

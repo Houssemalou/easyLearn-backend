@@ -2,7 +2,7 @@ spring:
   application:
     name: lingua-hub-backend
   profiles:
-    active: ${SPRING_PROFILES_ACTIVE:dev}
+    active: ${SPRING_PROFILES_ACTIVE:prod}
 
   datasource:
     url: jdbc:postgresql://postgres:5432/lingua_hub
@@ -47,6 +47,10 @@ server:
 
 app:
   frontend-url: ${FRONTEND_URL:https://learnup.tn}
+  courses:
+    bucket: ${COURSES_BUCKET:courses}
+  learning-documents:
+    bucket: ${LEARNING_DOCUMENTS_BUCKET:learning-documents}
 
 
 

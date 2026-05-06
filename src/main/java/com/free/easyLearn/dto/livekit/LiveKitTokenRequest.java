@@ -13,4 +13,6 @@ public class LiveKitTokenRequest {
 
     @NotNull(message = "User ID is required")
     private UUID userId;
+
+    private UUID courseId;
 }

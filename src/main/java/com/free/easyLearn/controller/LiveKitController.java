@@ -63,7 +63,8 @@ public class LiveKitController {
     ) {
         LiveKitTokenResponse response = liveKitService.generateToken(
                 request.getRoomId(),
-                request.getUserId()
+                request.getUserId(),
+                request.getCourseId()
         );
         return ResponseEntity.ok(ApiResponse.success(response));
     }

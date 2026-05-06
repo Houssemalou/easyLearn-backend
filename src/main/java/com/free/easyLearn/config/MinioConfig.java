@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class MinioConfig {
 
-    @Value("${livekit.s3.endpoint:http://91.134.137.202:9000}")
+    @Value("${livekit.s3.endpoint:https://minio.learnup.tn}")
     private String minioUrl;
 
     @Value("${livekit.s3.access-key:minioadmin}")
