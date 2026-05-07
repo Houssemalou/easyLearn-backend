@@ -29,13 +29,13 @@ public class EmailService {
         message.setSubject("LinguaHub - Vérification de votre adresse email");
         message.setText(
                 "Bonjour " + name + ",\n\n" +
-                "Merci de vous être inscrit sur LinguaHub en tant que professeur.\n\n" +
+                "Merci de vous être inscrit sur LearnUp en tant que professeur.\n\n" +
                 "Pour activer votre compte, veuillez cliquer sur le lien suivant :\n" +
                 verificationLink + "\n\n" +
                 "Ce lien est valable pendant 24 heures.\n\n" +
                 "Si vous n'avez pas créé de compte, vous pouvez ignorer cet email.\n\n" +
                 "Cordialement,\n" +
-                "L'équipe LinguaHub"
+                "L'équipe LearnUp"
         );
 
         try {
