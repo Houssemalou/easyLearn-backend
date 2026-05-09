@@ -1,6 +1,7 @@
 package com.free.easyLearn.controller;
 
 import com.free.easyLearn.dto.common.ApiResponse;
+import com.free.easyLearn.dto.document.DocumentAccessResponse;
 import com.free.easyLearn.dto.document.LearningDocumentCommentDTO;
 import com.free.easyLearn.dto.document.LearningDocumentDTO;
 import com.free.easyLearn.entity.LearningDocument;
@@ -204,6 +205,28 @@ public class LearningDocumentController {
         UUID userId = getAuthenticatedUserId();
         learningDocumentCommentService.deleteComment(id, commentId, userId);
         return ResponseEntity.ok(ApiResponse.success("Comment deleted successfully", null));
+    }
+
+    @PostMapping("/{id}/access")
+    @PreAuthorize("hasRole('STUDENT')")
+    @Operation(summary = "Track document access", description = "Enregistre quand un élève ouvre un document")
+    public ResponseEntity<ApiResponse<Void>> trackAccess(@PathVariable UUID id) {
+        UUID userId = getAuthenticatedUserId();
+        learningDocumentService.trackDocumentAccess(id, userId);
+        return ResponseEntity.ok(ApiResponse.success("Access tracked", null));
+    }
+
+    @GetMapping("/{id}/access")
+    @PreAuthorize("hasRole('PROFESSOR')")
+    @Operation(summary = "Liste des élèves ayant accédé au document", description = "Pagination pour la liste des accès")
+    public ResponseEntity<ApiResponse<DocumentAccessResponse>> getDocumentAccess(
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize
+    ) {
+        UUID userId = getAuthenticatedUserId();
+        DocumentAccessResponse response = learningDocumentService.getDocumentAccess(id, userId, page, pageSize);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     private UUID getAuthenticatedUserId() {

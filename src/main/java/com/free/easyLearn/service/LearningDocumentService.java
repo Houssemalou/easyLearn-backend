@@ -1,11 +1,15 @@
 package com.free.easyLearn.service;
 
+import com.free.easyLearn.dto.document.DocumentAccessDTO;
+import com.free.easyLearn.dto.document.DocumentAccessResponse;
 import com.free.easyLearn.dto.document.LearningDocumentDTO;
+import com.free.easyLearn.entity.DocumentAccess;
 import com.free.easyLearn.entity.LearningDocument;
 import com.free.easyLearn.entity.Professor;
 import com.free.easyLearn.entity.Student;
 import com.free.easyLearn.exception.BadRequestException;
 import com.free.easyLearn.exception.ResourceNotFoundException;
+import com.free.easyLearn.repository.DocumentAccessRepository;
 import com.free.easyLearn.repository.LearningDocumentRepository;
 import com.free.easyLearn.repository.ProfessorRepository;
 import com.free.easyLearn.repository.StudentRepository;
@@ -13,6 +17,9 @@ import io.minio.*;
 import io.minio.errors.*;
 import io.minio.http.Method;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -38,6 +45,7 @@ public class LearningDocumentService {
     private final LearningDocumentRepository learningDocumentRepository;
     private final ProfessorRepository professorRepository;
     private final StudentRepository studentRepository;
+    private final DocumentAccessRepository documentAccessRepository;
     private final MinioClient minioClient;
 
     @Value("${app.learning-documents.bucket:learning-documents}")
@@ -46,10 +54,12 @@ public class LearningDocumentService {
     public LearningDocumentService(LearningDocumentRepository learningDocumentRepository,
                                    ProfessorRepository professorRepository,
                                    StudentRepository studentRepository,
+                                   DocumentAccessRepository documentAccessRepository,
                                    MinioClient minioClient) {
         this.learningDocumentRepository = learningDocumentRepository;
         this.professorRepository = professorRepository;
         this.studentRepository = studentRepository;
+        this.documentAccessRepository = documentAccessRepository;
         this.minioClient = minioClient;
     }
 
@@ -477,5 +487,68 @@ public class LearningDocumentService {
             return true;
         }
         return !LocalDateTime.now().isBefore(document.getCorrectionAvailableAt());
+    }
+
+    @Transactional
+    public void trackDocumentAccess(UUID documentId, UUID studentUserId) {
+        LearningDocument document = learningDocumentRepository.findById(documentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Document not found"));
+
+        Student student = studentRepository.findByUserId(studentUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
+
+        DocumentAccess existingAccess = documentAccessRepository.findByDocumentAndStudent(document, student)
+                .orElse(null);
+
+        if (existingAccess != null) {
+            existingAccess.setAccessedAt(LocalDateTime.now());
+            documentAccessRepository.save(existingAccess);
+        } else {
+            DocumentAccess newAccess = DocumentAccess.builder()
+                    .document(document)
+                    .student(student)
+                    .accessedAt(LocalDateTime.now())
+                    .build();
+            documentAccessRepository.save(newAccess);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public DocumentAccessResponse getDocumentAccess(UUID documentId, UUID professorUserId, int page, int pageSize) {
+        Professor professor = professorRepository.findByUserId(professorUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Professor not found"));
+
+        LearningDocument document = learningDocumentRepository.findByIdAndProfessorId(documentId, professor.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Document not found"));
+
+        Pageable pageable = PageRequest.of(page - 1, pageSize);
+        Page<DocumentAccess> accessPage = documentAccessRepository.findAccessByDocumentId(documentId, pageable);
+
+        List<DocumentAccessDTO> accessList = accessPage.getContent().stream()
+                .map(this::mapToAccessDTO)
+                .toList();
+
+        return DocumentAccessResponse.builder()
+                .data(accessList)
+                .total(accessPage.getTotalElements())
+                .page(page)
+                .pageSize(pageSize)
+                .totalPages(accessPage.getTotalPages())
+                .build();
+    }
+
+    private DocumentAccessDTO mapToAccessDTO(DocumentAccess access) {
+        Student student = access.getStudent();
+        return DocumentAccessDTO.builder()
+                .id(access.getId())
+                .documentId(access.getDocument().getId())
+                .studentId(student.getId())
+                .studentName(student.getUser() != null ? student.getUser().getName() : "Unknown")
+                .studentAvatar(student.getUser().getAvatar())
+                .level(student.getLevel() != null ? student.getLevel().name() : null)
+                .accessedAt(access.getAccessedAt())
+                .completedAt(access.getCompletedAt())
+                .readTimeSeconds(access.getReadTimeSeconds())
+                .build();
     }
 }

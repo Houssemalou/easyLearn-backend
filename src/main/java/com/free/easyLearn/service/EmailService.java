@@ -26,7 +26,7 @@ public class EmailService {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(fromEmail);
         message.setTo(toEmail);
-        message.setSubject("LinguaHub - Vérification de votre adresse email");
+        message.setSubject("LearnUp - Vérification de votre adresse email");
         message.setText(
                 "Bonjour " + name + ",\n\n" +
                 "Merci de vous être inscrit sur LearnUp en tant que professeur.\n\n" +
