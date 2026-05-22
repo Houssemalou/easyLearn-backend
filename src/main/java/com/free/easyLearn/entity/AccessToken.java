@@ -29,6 +29,10 @@ public class AccessToken {
     @Column(nullable = false)
     private UserRole role;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "subscription_type")
+    private SubscriptionType subscriptionType;
+
     @Column(name = "is_used")
     private Boolean isUsed = false;
 
@@ -52,5 +56,9 @@ public class AccessToken {
 
     public enum UserRole {
         ADMIN, PROFESSOR, STUDENT
+    }
+
+    public enum SubscriptionType {
+        BASE, PREMIUM, CUSTOM
     }
 }

@@ -18,4 +18,6 @@ public interface LiveKitTokenRepository extends JpaRepository<LiveKitToken, UUID
     );
 
     void deleteByExpiresAtBefore(LocalDateTime now);
+
+    void deleteByRoomId(UUID roomId);
 }

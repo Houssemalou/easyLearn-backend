@@ -34,6 +34,10 @@ public class Professor {
     @Column(name = "professor_type", length = 30)
     private ProfessorType professorType;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "subscription_type", length = 20)
+    private SubscriptionType subscriptionType;
+
     @Column(columnDefinition = "TEXT")
     private String bio;
     
@@ -46,6 +50,12 @@ public class Professor {
         PROF_SECONDAIRE,
         FORMATEUR,
         PROF_PREPA
+    }
+
+    public enum SubscriptionType {
+        BASE,
+        PREMIUM,
+        CUSTOM
     }
     
     @ElementCollection(fetch = FetchType.EAGER)

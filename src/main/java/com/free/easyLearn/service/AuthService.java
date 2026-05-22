@@ -176,6 +176,9 @@ public class AuthService {
                 .languages(request.getLanguages())
                 .specialization(request.getSpecialization())
                 .professorType(Professor.ProfessorType.valueOf(request.getProfessorType().toUpperCase()))
+            .subscriptionType(accessToken.getSubscriptionType() != null
+                ? Professor.SubscriptionType.valueOf(accessToken.getSubscriptionType().name())
+                : Professor.SubscriptionType.BASE)
                 .joinedAt(LocalDateTime.now())
                 .createdBy(accessToken.getCreatedBy())
                 .build();
@@ -417,7 +420,7 @@ public class AuthService {
     }
 
     @Transactional
-    public AccessToken generateAccessToken(AccessToken.UserRole role, User createdBy) {
+    public AccessToken generateAccessToken(AccessToken.UserRole role, User createdBy, AccessToken.SubscriptionType subscriptionType) {
         // Generate unique token with role prefix
         String token;
         do {
@@ -425,24 +428,37 @@ public class AuthService {
             token = role.name() + "_" + randomPart;
         } while (accessTokenRepository.existsByTokenAndIsUsedFalseAndExpiresAtAfter(token, LocalDateTime.now()));
 
+        AccessToken.SubscriptionType resolvedType = resolveSubscriptionType(role, subscriptionType);
+
         AccessToken accessToken = AccessToken.builder()
                 .token(token)
                 .role(role)
                 .isUsed(false)
                 .expiresAt(LocalDateTime.now().plusYears(1)) // Tokens valid for 1 year
                 .createdBy(createdBy)
+                .subscriptionType(resolvedType)
                 .build();
 
         return accessTokenRepository.save(accessToken);
     }
 
     @Transactional
-    public List<AccessToken> generateAccessTokens(AccessToken.UserRole role, int count, User createdBy) {
+    public List<AccessToken> generateAccessTokens(AccessToken.UserRole role, int count, User createdBy, AccessToken.SubscriptionType subscriptionType) {
         List<AccessToken> tokens = new java.util.ArrayList<>();
         for (int i = 0; i < count; i++) {
-            tokens.add(generateAccessToken(role, createdBy));
+            tokens.add(generateAccessToken(role, createdBy, subscriptionType));
         }
         return tokens;
+    }
+
+    private AccessToken.SubscriptionType resolveSubscriptionType(AccessToken.UserRole role, AccessToken.SubscriptionType subscriptionType) {
+        if (role != AccessToken.UserRole.PROFESSOR) {
+            return null;
+        }
+        if (subscriptionType == null) {
+            throw new BadRequestException("Subscription type is required for professor tokens");
+        }
+        return subscriptionType;
     }
 
     public List<AccessToken> getAvailableAccessTokens(AccessToken.UserRole role) {

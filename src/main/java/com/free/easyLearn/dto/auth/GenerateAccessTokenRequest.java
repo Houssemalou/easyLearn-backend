@@ -18,4 +18,7 @@ public class GenerateAccessTokenRequest {
     @Min(value = 1, message = "Count must be at least 1")
     @Max(value = 100, message = "Count must be at most 100")
     private Integer count = 1;
+
+    // Only used when role == PROFESSOR (BASE | PREMIUM | CUSTOM)
+    private String subscriptionType;
 }

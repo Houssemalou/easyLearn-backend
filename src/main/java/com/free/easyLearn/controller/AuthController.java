@@ -283,12 +283,18 @@ public class AuthController {
         AccessToken.UserRole role = AccessToken.UserRole.valueOf(request.getRole().toUpperCase());
         int count = request.getCount() != null ? request.getCount() : 1;
 
-        java.util.List<com.free.easyLearn.entity.AccessToken> tokens = authService.generateAccessTokens(role, count, user);
+                AccessToken.SubscriptionType subscriptionType = null;
+                if (request.getSubscriptionType() != null && !request.getSubscriptionType().isBlank()) {
+                        subscriptionType = AccessToken.SubscriptionType.valueOf(request.getSubscriptionType().toUpperCase());
+                }
+
+                java.util.List<com.free.easyLearn.entity.AccessToken> tokens = authService.generateAccessTokens(role, count, user, subscriptionType);
 
         java.util.List<GenerateAccessTokenResponse> responses = tokens.stream()
                 .map(token -> GenerateAccessTokenResponse.builder()
                         .token(token.getToken())
                         .role(token.getRole().name())
+                        .subscriptionType(token.getSubscriptionType() != null ? token.getSubscriptionType().name() : null)
                         .expiresAt(token.getExpiresAt())
                         .createdAt(token.getCreatedAt())
                         .build())
@@ -312,6 +318,7 @@ public class AuthController {
                 .map(token -> GenerateAccessTokenResponse.builder()
                         .token(token.getToken())
                         .role(token.getRole().name())
+                        .subscriptionType(token.getSubscriptionType() != null ? token.getSubscriptionType().name() : null)
                         .expiresAt(token.getExpiresAt())
                         .createdAt(token.getCreatedAt())
                         .build())

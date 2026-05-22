@@ -73,12 +73,18 @@ public class DataInitializer implements ApplicationRunner {
         String randomPart = UUID.randomUUID().toString().toUpperCase().replace("-", "").substring(0, 12);
         String token = role.name() + "_" + randomPart;
 
+        AccessToken.SubscriptionType subscriptionType = null;
+        if (role == AccessToken.UserRole.PROFESSOR) {
+            subscriptionType = AccessToken.SubscriptionType.BASE;
+        }
+
         AccessToken accessToken = AccessToken.builder()
                 .token(token)
                 .role(role)
                 .isUsed(false)
                 .expiresAt(LocalDateTime.now().plusDays(30))
                 .createdBy(createdBy)
+                .subscriptionType(subscriptionType)
                 .build();
 
         accessTokenRepository.save(accessToken);

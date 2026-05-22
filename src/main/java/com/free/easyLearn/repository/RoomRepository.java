@@ -32,6 +32,8 @@ public interface RoomRepository extends JpaRepository<Room, UUID> {
     @Query("SELECT r FROM Room r WHERE r.professor.id = :professorId")
     List<Room> findAllByProfessorId(@Param("professorId") UUID professorId);
 
+    long countByProfessorIdAndCreatedAtBetween(UUID professorId, java.time.LocalDateTime start, java.time.LocalDateTime end);
+
     @Query("SELECT DISTINCT r FROM Room r JOIN r.participants p WHERE p.student.id = :studentId AND p.invited = true AND r.status = :status ORDER BY r.scheduledAt ASC")
     List<Room> findByStudentIdAndStatus(@Param("studentId") UUID studentId, @Param("status") Room.RoomStatus status);
 

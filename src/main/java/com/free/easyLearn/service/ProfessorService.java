@@ -66,7 +66,8 @@ public class ProfessorService {
                 .languages(request.getLanguages())
                 .specialization(request.getSpecialization())
                 .bio(request.getBio())
-                .totalSessions(0);
+            .totalSessions(0)
+            .subscriptionType(Professor.SubscriptionType.BASE);
 
         // If there's an authenticated admin creating this professor, set createdBy
         try {
@@ -152,6 +153,7 @@ public class ProfessorService {
                 .languages(professor.getLanguages())
                 .specialization(professor.getSpecialization())
                 .professorType(professor.getProfessorType() != null ? professor.getProfessorType().name() : null)
+                .subscriptionType(professor.getSubscriptionType() != null ? professor.getSubscriptionType().name() : null)
                 .bio(professor.getBio())
                 .totalSessions(computeProfessorTotalSessions(professor.getId()))
                 .joinedAt(professor.getCreatedAt())

@@ -15,6 +15,7 @@ public class GenerateAccessTokenResponse {
 
     private String token;
     private String role;
+    private String subscriptionType;
     private LocalDateTime expiresAt;
     private LocalDateTime createdAt;
 }

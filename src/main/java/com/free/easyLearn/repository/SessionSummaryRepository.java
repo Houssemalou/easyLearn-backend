@@ -16,4 +16,6 @@ public interface SessionSummaryRepository extends JpaRepository<SessionSummary, 
     List<SessionSummary> findByProfessorId(UUID professorId);
 
     List<SessionSummary> findByRoomIdIn(List<UUID> roomIds);
+
+    void deleteByRoomId(UUID roomId);
 }

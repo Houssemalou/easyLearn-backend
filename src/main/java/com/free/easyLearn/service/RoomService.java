@@ -14,6 +14,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -40,6 +42,12 @@ public class RoomService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private LiveKitTokenRepository liveKitTokenRepository;
+
+    @Autowired
+    private SessionSummaryRepository sessionSummaryRepository;
+
     @Transactional
     public RoomDTO createRoom(CreateRoomRequest request) {
         Room room = Room.builder()
@@ -58,6 +66,9 @@ public class RoomService {
         if (request.getProfessorId() != null) {
             Professor professor = professorRepository.findById(request.getProfessorId())
                     .orElseThrow(() -> new ResourceNotFoundException("Professor not found"));
+            if (request.getAnimatorType() == Room.AnimatorType.PROFESSOR) {
+                enforceProfessorSessionLimit(professor);
+            }
             room.setProfessor(professor);
         }
 
@@ -84,6 +95,27 @@ public class RoomService {
         return mapToDTO(room);
     }
 
+    private void enforceProfessorSessionLimit(Professor professor) {
+        Professor.SubscriptionType subscriptionType = professor.getSubscriptionType();
+        if (subscriptionType == null) {
+            subscriptionType = Professor.SubscriptionType.BASE;
+        }
+
+        if (subscriptionType == Professor.SubscriptionType.CUSTOM) {
+            return;
+        }
+
+        int limit = subscriptionType == Professor.SubscriptionType.PREMIUM ? 12 : 5;
+        YearMonth currentMonth = YearMonth.now();
+        LocalDateTime start = currentMonth.atDay(1).atStartOfDay();
+        LocalDateTime end = currentMonth.atEndOfMonth().atTime(LocalTime.MAX);
+
+        long count = roomRepository.countByProfessorIdAndCreatedAtBetween(professor.getId(), start, end);
+        if (count >= limit) {
+            throw new BadRequestException("Monthly session limit reached for professor subscription type: " + subscriptionType.name());
+        }
+    }
+
     @Transactional
     public RoomDTO updateRoom(UUID roomId, UpdateRoomRequest request) {
         Room room = roomRepository.findById(roomId)
@@ -108,6 +140,9 @@ public class RoomService {
         if (room.getLivekitRoomName() != null) {
             liveKitService.deleteLiveKitRoom(room.getLivekitRoomName());
         }
+
+        liveKitTokenRepository.deleteByRoomId(roomId);
+        sessionSummaryRepository.deleteByRoomId(roomId);
 
         roomRepository.delete(room);
     }
