@@ -12,9 +12,15 @@ import com.free.easyLearn.repository.StudentRepository;
 import com.free.easyLearn.repository.UserRepository;
 import com.free.easyLearn.service.LearningDocumentCommentService;
 import com.free.easyLearn.service.LearningDocumentService;
+import io.minio.GetObjectArgs;
+import io.minio.MinioClient;
+import io.minio.errors.MinioException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -24,6 +30,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -38,15 +45,21 @@ public class LearningDocumentController {
     private final LearningDocumentCommentService learningDocumentCommentService;
     private final UserRepository userRepository;
     private final StudentRepository studentRepository;
+    private final MinioClient minioClient;
+
+    @Value("${app.learning-documents.bucket:learning-documents}")
+    private String learningDocumentsBucket;
 
     public LearningDocumentController(LearningDocumentService learningDocumentService,
                                       LearningDocumentCommentService learningDocumentCommentService,
                                       UserRepository userRepository,
-                                      StudentRepository studentRepository) {
+                                      StudentRepository studentRepository,
+                                      MinioClient minioClient) {
         this.learningDocumentService = learningDocumentService;
         this.learningDocumentCommentService = learningDocumentCommentService;
         this.userRepository = userRepository;
         this.studentRepository = studentRepository;
+        this.minioClient = minioClient;
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -227,6 +240,80 @@ public class LearningDocumentController {
         UUID userId = getAuthenticatedUserId();
         DocumentAccessResponse response = learningDocumentService.getDocumentAccess(id, userId, page, pageSize);
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/{id}/download")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Télécharger un fichier", description = "Télécharge le fichier principal d'une ressource")
+    public ResponseEntity<InputStreamResource> downloadDocument(@PathVariable UUID id) {
+        User user = getAuthenticatedUser();
+        LearningDocumentDTO dto;
+        if (user.getRole() == User.UserRole.PROFESSOR) {
+            dto = learningDocumentService.getProfessorDocumentById(id, user.getId());
+        } else if (user.getRole() == User.UserRole.STUDENT) {
+            dto = learningDocumentService.getStudentDocumentById(id, user.getId());
+        } else {
+            throw new BadRequestException("Only professor and student can access this resource");
+        }
+
+        if (dto.getObjectKey() == null || dto.getObjectKey().isBlank()) {
+            throw new BadRequestException("No file associated with this document");
+        }
+
+        try {
+            InputStream stream = minioClient.getObject(
+                    GetObjectArgs.builder()
+                            .bucket(learningDocumentsBucket)
+                            .object(dto.getObjectKey())
+                            .build()
+            );
+
+            String contentType = dto.getContentType() != null ? dto.getContentType() : "application/octet-stream";
+            String filename = dto.getFileName() != null ? dto.getFileName() : "document";
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(contentType))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
+                    .body(new InputStreamResource(stream));
+        } catch (Exception e) {
+            throw new BadRequestException("Failed to download file: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/{id}/correction/download")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Télécharger la correction", description = "Télécharge le fichier de correction d'une ressource")
+    public ResponseEntity<InputStreamResource> downloadCorrection(@PathVariable UUID id) {
+        User user = getAuthenticatedUser();
+        LearningDocumentDTO dto;
+        if (user.getRole() == User.UserRole.PROFESSOR) {
+            dto = learningDocumentService.getProfessorDocumentById(id, user.getId());
+        } else {
+            throw new BadRequestException("Only professors can download corrections");
+        }
+
+        if (dto.getCorrectionObjectKey() == null || dto.getCorrectionObjectKey().isBlank()) {
+            throw new BadRequestException("No correction file associated with this document");
+        }
+
+        try {
+            InputStream stream = minioClient.getObject(
+                    GetObjectArgs.builder()
+                            .bucket(learningDocumentsBucket)
+                            .object(dto.getCorrectionObjectKey())
+                            .build()
+            );
+
+            String contentType = dto.getCorrectionContentType() != null ? dto.getCorrectionContentType() : "application/octet-stream";
+            String filename = dto.getCorrectionFileName() != null ? dto.getCorrectionFileName() : "correction";
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(contentType))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
+                    .body(new InputStreamResource(stream));
+        } catch (Exception e) {
+            throw new BadRequestException("Failed to download correction: " + e.getMessage());
+        }
     }
 
     private UUID getAuthenticatedUserId() {
