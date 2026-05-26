@@ -5,6 +5,7 @@ import com.free.easyLearn.repository.SessionRecordingRepository;
 import io.livekit.server.*;
 import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MinioClient;
+import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;
 import io.minio.http.Method;
 import livekit.LivekitEgress;
@@ -21,10 +22,13 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class LiveKitRecordingService {
@@ -318,6 +322,42 @@ public class LiveKitRecordingService {
         } catch (Exception e) {
             log.error("Failed to save recording URL for room '{}': {}", roomName, e.getMessage(), e);
         }
+    }
+
+    /**
+     * Upload an external recording file (uploaded by professor) to MinIO and save to DB.
+     */
+    public SessionRecording uploadExternalRecording(String roomName, MultipartFile file) {
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || originalFilename.isBlank()) {
+            originalFilename = "recording.mp4";
+        }
+        String objectKey = roomName + "/external/" + timestamp + "_" + originalFilename;
+
+        try {
+            minioClient.putObject(
+                    PutObjectArgs.builder()
+                            .bucket(s3Bucket)
+                            .object(objectKey)
+                            .stream(file.getInputStream(), file.getSize(), -1)
+                            .contentType(file.getContentType() != null ? file.getContentType() : "video/mp4")
+                            .build()
+            );
+            log.info("External recording uploaded for room '{}': {}", roomName, objectKey);
+        } catch (Exception e) {
+            log.error("Failed to upload external recording for room '{}'", roomName, e);
+            throw new RuntimeException("Failed to upload recording to storage", e);
+        }
+
+        String endpoint = s3Endpoint.endsWith("/") ? s3Endpoint.substring(0, s3Endpoint.length() - 1) : s3Endpoint;
+        String recordingUrl = endpoint + "/" + s3Bucket + "/" + objectKey;
+
+        SessionRecording recording = SessionRecording.builder()
+                .roomName(roomName)
+                .recordingUrl(recordingUrl)
+                .build();
+        return sessionRecordingRepository.save(recording);
     }
 
     /**

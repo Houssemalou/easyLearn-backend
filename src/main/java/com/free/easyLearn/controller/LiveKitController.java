@@ -16,8 +16,10 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -98,6 +100,28 @@ public class LiveKitController {
 //            return ResponseEntity.status(401).body("Invalid signature");
 //        }
 //    }
+
+    @PostMapping(value = "/recordings/{roomName}/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(
+            summary = "Uploader un enregistrement externe",
+            description = "Permet à un professeur d'uploader un fichier d'enregistrement vidéo externe pour une session terminée."
+    )
+    public ResponseEntity<ApiResponse<SessionRecording>> uploadExternalRecording(
+            @PathVariable String roomName,
+            @RequestParam("file") MultipartFile file
+    ) {
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Le fichier est vide"));
+        }
+
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("video/")) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Seuls les fichiers vidéo sont acceptés"));
+        }
+
+        SessionRecording recording = recordingService.uploadExternalRecording(roomName, file);
+        return ResponseEntity.ok(ApiResponse.success(recording));
+    }
 
     @GetMapping("/recordings/{roomName}")
     @Operation(

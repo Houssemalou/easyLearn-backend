@@ -179,6 +179,7 @@ public class AuthService {
             .subscriptionType(accessToken.getSubscriptionType() != null
                 ? Professor.SubscriptionType.valueOf(accessToken.getSubscriptionType().name())
                 : Professor.SubscriptionType.BASE)
+                .recordingEnabled(accessToken.getRecordingEnabled() != null ? accessToken.getRecordingEnabled() : true)
                 .joinedAt(LocalDateTime.now())
                 .createdBy(accessToken.getCreatedBy())
                 .build();
@@ -420,7 +421,7 @@ public class AuthService {
     }
 
     @Transactional
-    public AccessToken generateAccessToken(AccessToken.UserRole role, User createdBy, AccessToken.SubscriptionType subscriptionType) {
+    public AccessToken generateAccessToken(AccessToken.UserRole role, User createdBy, AccessToken.SubscriptionType subscriptionType, Boolean recordingEnabled) {
         // Generate unique token with role prefix
         String token;
         do {
@@ -437,16 +438,17 @@ public class AuthService {
                 .expiresAt(LocalDateTime.now().plusYears(1)) // Tokens valid for 1 year
                 .createdBy(createdBy)
                 .subscriptionType(resolvedType)
+                .recordingEnabled(recordingEnabled != null ? recordingEnabled : true)
                 .build();
 
         return accessTokenRepository.save(accessToken);
     }
 
     @Transactional
-    public List<AccessToken> generateAccessTokens(AccessToken.UserRole role, int count, User createdBy, AccessToken.SubscriptionType subscriptionType) {
+    public List<AccessToken> generateAccessTokens(AccessToken.UserRole role, int count, User createdBy, AccessToken.SubscriptionType subscriptionType, Boolean recordingEnabled) {
         List<AccessToken> tokens = new java.util.ArrayList<>();
         for (int i = 0; i < count; i++) {
-            tokens.add(generateAccessToken(role, createdBy, subscriptionType));
+            tokens.add(generateAccessToken(role, createdBy, subscriptionType, recordingEnabled));
         }
         return tokens;
     }

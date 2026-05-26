@@ -102,13 +102,24 @@ public class LiveKitWebhookController {
     }
 
     /**
-     * When room starts, auto-start recording.
+     * When room starts, auto-start recording if the professor has recording enabled.
      * room_started fires ONCE when the LiveKit room is created (first participant connects).
      */
     private void handleRoomStarted(String roomName) {
-        log.info("Room started: '{}' — auto-starting recording", roomName);
+        log.info("Room started: '{}'", roomName);
 
         if (roomName == null) return;
+
+        // Check if recording is enabled for this room
+        try {
+            RoomDTO roomDto = roomService.getRoomByLivekitName(roomName);
+            if (roomDto != null && Boolean.FALSE.equals(roomDto.getRecordingEnabled())) {
+                log.info("Recording disabled for room '{}' — skipping recording start", roomName);
+                return;
+            }
+        } catch (Exception e) {
+            log.warn("Could not check recording config for room '{}': {}", roomName, e.getMessage());
+        }
 
         try {
             String egressId = recordingService.startRecording(roomName);

@@ -21,4 +21,7 @@ public class GenerateAccessTokenRequest {
 
     // Only used when role == PROFESSOR (BASE | PREMIUM | CUSTOM)
     private String subscriptionType;
+
+    // Whether session recording is enabled (default true, only used for PROFESSOR)
+    private Boolean recordingEnabled = true;
 }

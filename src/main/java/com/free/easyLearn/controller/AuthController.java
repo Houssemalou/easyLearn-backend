@@ -288,13 +288,16 @@ public class AuthController {
                         subscriptionType = AccessToken.SubscriptionType.valueOf(request.getSubscriptionType().toUpperCase());
                 }
 
-                java.util.List<com.free.easyLearn.entity.AccessToken> tokens = authService.generateAccessTokens(role, count, user, subscriptionType);
+                Boolean recordingEnabled = request.getRecordingEnabled();
+
+                java.util.List<com.free.easyLearn.entity.AccessToken> tokens = authService.generateAccessTokens(role, count, user, subscriptionType, recordingEnabled);
 
         java.util.List<GenerateAccessTokenResponse> responses = tokens.stream()
                 .map(token -> GenerateAccessTokenResponse.builder()
                         .token(token.getToken())
                         .role(token.getRole().name())
                         .subscriptionType(token.getSubscriptionType() != null ? token.getSubscriptionType().name() : null)
+                        .recordingEnabled(token.getRecordingEnabled())
                         .expiresAt(token.getExpiresAt())
                         .createdAt(token.getCreatedAt())
                         .build())
@@ -319,6 +322,7 @@ public class AuthController {
                         .token(token.getToken())
                         .role(token.getRole().name())
                         .subscriptionType(token.getSubscriptionType() != null ? token.getSubscriptionType().name() : null)
+                        .recordingEnabled(token.getRecordingEnabled())
                         .expiresAt(token.getExpiresAt())
                         .createdAt(token.getCreatedAt())
                         .build())

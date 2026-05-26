@@ -64,6 +64,10 @@ public class Room {
     @Column(name = "livekit_room_name", unique = true)
     private String livekitRoomName;
 
+    @Column(name = "recording_enabled")
+    @Builder.Default
+    private Boolean recordingEnabled = true;
+
     @OneToMany(mappedBy = "room", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<RoomParticipant> participants = new ArrayList<>();

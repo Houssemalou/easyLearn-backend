@@ -70,6 +70,7 @@ public class RoomService {
                 enforceProfessorSessionLimit(professor);
             }
             room.setProfessor(professor);
+            room.setRecordingEnabled(professor.getRecordingEnabled() != null ? professor.getRecordingEnabled() : true);
         }
 
         // Generate LiveKit room name
@@ -444,6 +445,7 @@ public class RoomService {
                 .invitedStudents(invitedStudents)
                 .joinedStudents(joinedStudents)
                 .participantsCount(joinedStudents.size())
+                .recordingEnabled(room.getRecordingEnabled())
                 .createdAt(room.getCreatedAt())
                 .updatedAt(room.getUpdatedAt())
                 .build();

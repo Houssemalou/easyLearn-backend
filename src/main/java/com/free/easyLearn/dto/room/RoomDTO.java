@@ -32,6 +32,7 @@ public class RoomDTO {
     private List<UUID> invitedStudents;
     private List<UUID> joinedStudents;
     private Integer participantsCount;
+    private Boolean recordingEnabled;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

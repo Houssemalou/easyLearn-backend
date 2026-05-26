@@ -81,6 +81,10 @@ public class Professor {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "recording_enabled")
+    @Builder.Default
+    private Boolean recordingEnabled = true;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
     private User createdBy;

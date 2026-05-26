@@ -36,6 +36,10 @@ public class AccessToken {
     @Column(name = "is_used")
     private Boolean isUsed = false;
 
+    @Column(name = "recording_enabled")
+    @Builder.Default
+    private Boolean recordingEnabled = true;
+
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;
 
